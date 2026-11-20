@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Clinic On{% endblock %}
+{% block page_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<!-- Top Banner / Title Bar -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1" style="letter-spacing: -0.3px;">Hospital Administration</h4>
+        <p class="text-muted small mb-0">Overview of active doctor specializations and clinical departments</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'category_add' %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> Add Category
+        </a>
+        <a href="{% url 'department_add' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> Add Department
+        </a>
+    </div>
+</div>
+
+<!-- Aesthetic Metrics Row -->
+<div class="row g-3 mb-4">
+    <!-- Doctor Categories -->
+    <div class="col-md-4">
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.5px; font-size: 0.72rem;">Doctor Categories</span>
+                    <h3 class="fw-bold mt-2 mb-1" style="color: #2563eb;">{{ total_categories }}</h3>
+                    <span class="badge-soft-success small">
+                        <i class="fa-solid fa-check me-1"></i>{{ active_categories }} Active
+                    </span>
+                </div>
+                <div style="width: 40px; height: 40px; border-radius: 10px; background-color: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2 border-top">
+                <a href="{% url 'category_list' %}" class="small text-decoration-none text-primary fw-medium">
+                    Manage categories &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Departments -->
+    <div class="col-md-4">
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.5px; font-size: 0.72rem;">Departments</span>
+                    <h3 class="fw-bold mt-2 mb-1" style="color: #0f172a;">{{ total_departments }}</h3>
+                    <span class="badge-soft-secondary small">
+                        {{ active_departments }} Active Units
+                    </span>
+                </div>
+                <div style="width: 40px; height: 40px; border-radius: 10px; background-color: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2 border-top">
+                <a href="{% url 'department_list' %}" class="small text-decoration-none text-secondary fw-medium">
+                    View departments &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="col-md-4">
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.5px; font-size: 0.72rem;">Admin Session</span>
+                    <h4 class="fw-bold mt-2 mb-1 text-success">Active</h4>
+                    <span class="text-muted small">
+                        Role: {{ request.user.role }}
+                    </span>
+                </div>
+                <div style="width: 40px; height: 40px; border-radius: 10px; background-color: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2 border-top">
+                <span class="small text-muted">Clinic On Hospital Portal</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Sections Grid -->
+<div class="row g-3">
+    <!-- Doctor Categories Table -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Doctor Categories</span>
+                <a href="{% url 'category_list' %}" class="small text-decoration-none text-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_categories %}
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Department</th>
+                                    <th>Fee</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in recent_categories %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold text-dark">{{ cat.name }}</div>
+                                            <small class="text-muted">{{ cat.description|truncatewords:5|default:"—" }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">
+                                                {{ cat.department.name }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold">₹{{ cat.consultation_fee }}</span>
+                                        </td>
+                                        <td>
+                                            {% if cat.is_active %}
+                                                <span class="badge-soft-success">Active</span>
+                                            {% else %}
+                                                <span class="badge-soft-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{% url 'category_edit' cat.pk %}" class="btn btn-outline-primary btn-sm py-0 px-2" title="Edit">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </a>
+                                            <a href="{% url 'category_delete' cat.pk %}" class="btn btn-outline-danger btn-sm py-0 px-2 ms-1" title="Delete">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted small mb-2">No doctor categories added yet.</p>
+                        <a href="{% url 'category_add' %}" class="btn btn-primary btn-sm">Add Category</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Directory & Logs -->
+    <div class="col-lg-4">
+        <!-- Departments Directory Card -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Departments</span>
+                <a href="{% url 'department_list' %}" class="small text-decoration-none">Manage</a>
+            </div>
+            <div class="card-body p-0">
+                {% if departments_summary %}
+                    <ul class="list-group list-group-flush">
+                        {% for dept in departments_summary %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                                <div>
+                                    <div class="small fw-semibold text-dark">{{ dept.name }}</div>
+                                    <small class="text-muted" style="font-size: 0.72rem;">HOD: {{ dept.head_of_department|default:"Not assigned" }}</small>
+                                </div>
+                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">
+                                    {{ dept.cat_count }} categories
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="p-3 text-muted small">No departments configured yet.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Logins Card -->
+        <div class="card">
+            <div class="card-header">
+                <span>Recent Admin Logins</span>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_logins %}
+                    <ul class="list-group list-group-flush small">
+                        {% for log in recent_logins %}
+                            <li class="list-group-item py-2 px-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-medium text-dark">{{ log.user.email }}</span>
+                                    <span class="badge-soft-success" style="font-size: 0.68rem;">Success</span>
+                                </div>
+                                <div class="text-muted" style="font-size: 0.72rem;">
+                                    {{ log.login_time|date:"M d, Y • h:i A" }}
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="p-3 text-muted small">No login history available.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

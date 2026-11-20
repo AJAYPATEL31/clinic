@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Clinic On{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="mb-3">
+            <a href="{% url 'department_list' %}" class="text-decoration-none text-muted small">
+                &larr; Back to Departments
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span>{{ title }}</span>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
+                                Department Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.code.id_for_label }}" class="form-label fw-semibold">
+                                Department Code
+                            </label>
+                            {{ form.code }}
+                            {% if form.code.errors %}
+                                <div class="text-danger small mt-1">{{ form.code.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.head_of_department.id_for_label }}" class="form-label fw-semibold">
+                            Head of Department (HOD)
+                        </label>
+                        {{ form.head_of_department }}
+                        {% if form.head_of_department.errors %}
+                            <div class="text-danger small mt-1">{{ form.head_of_department.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+                            Description
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4 form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            Active Department
+                        </label>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <a href="{% url 'department_list' %}" class="btn btn-outline-secondary btn-sm">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-sm px-3">
+                            {% if is_edit %}Update Department{% else %}Save Department{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

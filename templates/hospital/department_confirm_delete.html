@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Department - Clinic On{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card mt-4">
+            <div class="card-header bg-danger text-white">
+                <span>Confirm Department Deletion</span>
+            </div>
+            <div class="card-body p-4 text-center">
+                <i class="fa-solid fa-triangle-exclamation text-danger fs-1 mb-3"></i>
+                <h5 class="card-title">Delete Department?</h5>
+                <p class="card-text text-muted">
+                    Are you sure you want to delete <strong>"{{ department.name }}"</strong>?
+                </p>
+                <div class="alert alert-warning small text-start">
+                    Warning: Deleting this department will also remove all doctor categories under it.
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'department_list' %}" class="btn btn-secondary btn-sm">Cancel</a>
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
