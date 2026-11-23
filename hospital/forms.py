@@ -1,5 +1,5 @@
 from django import forms
-from .models import DoctorCategory, Department
+from .models import DoctorCategory, Department, DoctorRegister
 
 
 class AdminLoginForm(forms.Form):
@@ -94,3 +94,83 @@ class DepartmentForm(forms.ModelForm):
                 'placeholder': 'Department description and scope...'
             }),
         }
+
+
+class DoctorRegisterForm(forms.ModelForm):
+    """
+    Form for manual Doctor Registration in HTML
+    """
+    class Meta:
+        model = DoctorRegister
+        fields = [
+            'full_name', 'email', 'phone', 'department', 'category',
+            'qualification', 'experience_years', 'consultation_fee',
+            'room_number', 'address', 'is_active'
+        ]
+        widgets = {
+            'full_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'id': 'docFullName',
+                'placeholder': 'e.g. Dr. Ramesh Kumar',
+                'required': True
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'id': 'docEmail',
+                'placeholder': 'doctor@clinicon.com',
+                'required': True
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'id': 'docPhone',
+                'placeholder': '+91 98765 43210',
+                'required': True
+            }),
+            'department': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'docDepartment',
+                'required': True
+            }),
+            'category': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'docCategory',
+                'required': True
+            }),
+            'qualification': forms.TextInput(attrs={
+                'class': 'form-control',
+                'id': 'docQualification',
+                'placeholder': 'e.g. MBBS, MD (Cardiology)',
+                'required': True
+            }),
+            'experience_years': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'id': 'docExperience',
+                'min': '0',
+                'placeholder': '5',
+                'required': True
+            }),
+            'consultation_fee': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'id': 'docFee',
+                'step': '10.00',
+                'min': '0',
+                'placeholder': '500.00',
+                'required': True
+            }),
+            'room_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'id': 'docRoom',
+                'placeholder': 'OPD Room 104'
+            }),
+            'address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'id': 'docAddress',
+                'rows': 2,
+                'placeholder': 'Clinic / Residential address'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'role': 'switch'
+            }),
+        }
+

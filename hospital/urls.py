@@ -21,4 +21,9 @@ urlpatterns = [
     path('departments/add/', views.department_add_view, name='department_add'),
     path('departments/<int:pk>/edit/', views.department_edit_view, name='department_edit'),
     path('departments/<int:pk>/delete/', views.department_delete_view, name='department_delete'),
+
+    # Doctor Registration URLs
+    path('doctors/', views.doctor_list_view, name='doctor_list'),
+    path('doctors/register/', views.doctor_register_view, name='doctor_register'),
+    path('doctors/<int:pk>/delete/', views.doctor_delete_view, name='doctor_delete'),
 ]

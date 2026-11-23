@@ -321,6 +321,18 @@
 
             <li class="nav-label">Hospital Features</li>
             <li>
+                <a href="{% url 'doctor_list' %}" class="sidebar-link {% if 'doctor' in request.resolver_match.url_name and 'category' not in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fa-solid fa-user-nurse"></i>
+                    <span>Doctors</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'doctor_register' %}" class="sidebar-link {% if request.resolver_match.url_name == 'doctor_register' %}active{% endif %}" style="padding-left: 32px; font-size: 0.82rem;">
+                    <i class="fa-solid fa-user-plus" style="font-size: 0.85rem;"></i>
+                    <span>Register Doctor</span>
+                </a>
+            </li>
+            <li>
                 <a href="{% url 'category_list' %}" class="sidebar-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="fa-solid fa-user-doctor"></i>
                     <span>Doctor Categories</span>

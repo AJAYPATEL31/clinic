@@ -179,3 +179,61 @@ class DoctorCategory(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.department.name})"
+
+
+# ==========================================
+# Task: Doctor Registration Model
+# ==========================================
+
+class DoctorRegister(models.Model):
+    """
+    Model for manual Doctor Registration in Clinic On system.
+    Stores doctor's professional details, department, and category.
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='doctor_profile'
+    )
+    full_name = models.CharField(max_length=150, verbose_name='Doctor Full Name')
+    email = models.EmailField(unique=True, verbose_name='Email Address')
+    phone = models.CharField(max_length=20, verbose_name='Contact Phone')
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.CASCADE,
+        related_name='registered_doctors',
+        verbose_name='Department'
+    )
+    category = models.ForeignKey(
+        DoctorCategory,
+        on_delete=models.CASCADE,
+        related_name='registered_doctors',
+        verbose_name='Doctor Category / Specialization'
+    )
+    qualification = models.CharField(max_length=120, verbose_name='Qualification', help_text='e.g. MBBS, MD, MS, DM')
+    experience_years = models.PositiveIntegerField(default=1, verbose_name='Experience (Years)')
+    consultation_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=500.00,
+        verbose_name='Consultation Fee (₹)'
+    )
+    room_number = models.CharField(max_length=30, blank=True, null=True, verbose_name='OPD Room / Cabin')
+    address = models.TextField(blank=True, null=True, verbose_name='Residential / Clinic Address')
+    registration_date = models.DateTimeField(auto_now_add=True, verbose_name='Registration Date')
+    is_active = models.BooleanField(default=True, verbose_name='Active Status')
+
+    class Meta:
+        verbose_name = 'Doctor Registration'
+        verbose_name_plural = 'Doctor Registrations'
+        ordering = ['-registration_date']
+
+    def __str__(self):
+        return f"Dr. {self.full_name} ({self.category.name})"
+
+
+# Alias for compatibility
+DoctorRegistration = DoctorRegister
+

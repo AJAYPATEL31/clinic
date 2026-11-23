@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from hospital.models import CustomUser, UserRegistration, Department, DoctorCategory
+from hospital.models import CustomUser, UserRegistration, Department, DoctorCategory, DoctorRegister
 
 
 class Command(BaseCommand):
@@ -158,5 +158,47 @@ class Command(BaseCommand):
                 created_cat_count += 1
 
         self.stdout.write(self.style.SUCCESS(f'Configured Doctor Categories (total: {DoctorCategory.objects.count()}).'))
+
+        # 5. Create Sample Registered Doctors (DoctorRegister model)
+        cardio_cat = DoctorCategory.objects.filter(department=dept_objs['Cardiology']).first()
+        neuro_cat = DoctorCategory.objects.filter(department=dept_objs['Neurology']).first()
+
+        sample_doctors = [
+            {
+                'full_name': 'Rajesh Sharma',
+                'email': 'dr.rajesh@clinicon.com',
+                'phone': '+91 98234 56789',
+                'department': dept_objs['Cardiology'],
+                'category': cardio_cat,
+                'qualification': 'MBBS, MD, DM (Cardiology)',
+                'experience_years': 16,
+                'consultation_fee': 1000.00,
+                'room_number': 'Cardio OPD - Cabin 101',
+                'address': 'Clinic On Heart Wing, 1st Floor',
+                'is_active': True,
+            },
+            {
+                'full_name': 'Priya Nair',
+                'email': 'dr.priya@clinicon.com',
+                'phone': '+91 97123 45678',
+                'department': dept_objs['Neurology'],
+                'category': neuro_cat,
+                'qualification': 'MBBS, MS, MCh (Neuro)',
+                'experience_years': 12,
+                'consultation_fee': 1200.00,
+                'room_number': 'Neuro OPD - Cabin 205',
+                'address': 'Clinic On Neuro Science Centre',
+                'is_active': True,
+            },
+        ]
+
+        for doc in sample_doctors:
+            if doc['category']:
+                DoctorRegister.objects.get_or_create(
+                    email=doc['email'],
+                    defaults=doc
+                )
+
+        self.stdout.write(self.style.SUCCESS(f'Configured Sample Doctors (total: {DoctorRegister.objects.count()}).'))
         self.stdout.write(self.style.SUCCESS('\n=== Seed Completed Successfully! ==='))
         self.stdout.write(self.style.SUCCESS('Admin Login: admin@clinicon.com / admin123'))

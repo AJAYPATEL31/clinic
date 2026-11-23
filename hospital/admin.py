@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, UserRegistration, LoginLog, Department, DoctorCategory
+from .models import CustomUser, UserRegistration, LoginLog, Department, DoctorCategory, DoctorRegister
 
 
 @admin.register(CustomUser)
@@ -50,3 +50,11 @@ class DoctorCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'department', 'consultation_fee', 'is_active', 'created_at')
     list_filter = ('department', 'is_active')
     search_fields = ('name', 'department__name', 'description')
+
+
+@admin.register(DoctorRegister)
+class DoctorRegisterAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'email', 'phone', 'department', 'category', 'qualification', 'is_active')
+    list_filter = ('department', 'category', 'is_active')
+    search_fields = ('full_name', 'email', 'phone', 'qualification')
+

@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+
+{% block title %}Manual Doctor Registration - Clinic On{% endblock %}
+{% block page_title %}Manual Doctor Registration{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9 col-md-11">
+        <!-- Back Link -->
+        <div class="mb-3">
+            <a href="{% url 'doctor_list' %}" class="text-decoration-none text-muted small">
+                &larr; Back to Doctors Directory
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>{{ title }}</span>
+                <span class="badge bg-primary-subtle text-primary border small" style="font-size: 0.72rem;">Manual Entry</span>
+            </div>
+            <div class="card-body p-4">
+                <!-- Frontend Validation Alert -->
+                <div id="docFrontendAlert" class="alert alert-danger alert-dismissible fade show d-none small py-2 px-3 mb-3" role="alert">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i>
+                    <span id="docFrontendAlertMsg">Please fill in all required doctor details correctly.</span>
+                    <button type="button" class="btn-close py-2" id="docCloseAlertBtn" aria-label="Close"></button>
+                </div>
+
+                <form method="POST" id="doctorRegisterForm" novalidate>
+                    {% csrf_token %}
+
+                    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                        <i class="fa-solid fa-user-doctor text-primary me-2"></i>Doctor Personal & Contact Information
+                    </h6>
+
+                    <!-- Full Name & Email Row -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="docFullName" class="form-label fw-semibold">
+                                Doctor Full Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.full_name }}
+                            <div class="invalid-feedback" id="nameError">Doctor's full name is required (min 3 chars).</div>
+                            {% if form.full_name.errors %}
+                                <div class="text-danger small mt-1">{{ form.full_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="docEmail" class="form-label fw-semibold">
+                                Email Address <span class="text-danger">*</span>
+                            </label>
+                            {{ form.email }}
+                            <div class="invalid-feedback" id="emailError">Please enter a valid email address.</div>
+                            {% if form.email.errors %}
+                                <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Phone & Qualification Row -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="docPhone" class="form-label fw-semibold">
+                                Phone Number <span class="text-danger">*</span>
+                            </label>
+                            {{ form.phone }}
+                            <div class="invalid-feedback" id="phoneError">Valid phone number is required (min 8 digits).</div>
+                            {% if form.phone.errors %}
+                                <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="docQualification" class="form-label fw-semibold">
+                                Medical Qualifications <span class="text-danger">*</span>
+                            </label>
+                            {{ form.qualification }}
+                            <div class="invalid-feedback" id="qualError">Qualification is required (e.g. MBBS, MD).</div>
+                            {% if form.qualification.errors %}
+                                <div class="text-danger small mt-1">{{ form.qualification.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                        <i class="fa-solid fa-hospital-user text-primary me-2"></i>Department & Specialization Details
+                    </h6>
+
+                    <!-- Department & Category Row -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="docDepartment" class="form-label fw-semibold">
+                                Hospital Department <span class="text-danger">*</span>
+                            </label>
+                            {{ form.department }}
+                            <div class="invalid-feedback" id="deptError">Please select a department.</div>
+                            {% if form.department.errors %}
+                                <div class="text-danger small mt-1">{{ form.department.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="docCategory" class="form-label fw-semibold">
+                                Doctor Category / Role <span class="text-danger">*</span>
+                            </label>
+                            {{ form.category }}
+                            <div class="invalid-feedback" id="catError">Please select a doctor category.</div>
+                            {% if form.category.errors %}
+                                <div class="text-danger small mt-1">{{ form.category.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Experience, Consultation Fee, Room Row -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="docExperience" class="form-label fw-semibold">
+                                Experience (Years) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.experience_years }}
+                            <div class="invalid-feedback" id="expError">Experience cannot be negative.</div>
+                            {% if form.experience_years.errors %}
+                                <div class="text-danger small mt-1">{{ form.experience_years.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="docFee" class="form-label fw-semibold">
+                                Consultation Fee (₹) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                {{ form.consultation_fee }}
+                            </div>
+                            <div class="invalid-feedback" id="feeError">Please enter a valid consultation fee.</div>
+                            {% if form.consultation_fee.errors %}
+                                <div class="text-danger small mt-1">{{ form.consultation_fee.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="docRoom" class="form-label fw-semibold">
+                                OPD Room / Cabin
+                            </label>
+                            {{ form.room_number }}
+                            {% if form.room_number.errors %}
+                                <div class="text-danger small mt-1">{{ form.room_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Address / Special Notes -->
+                    <div class="mb-3">
+                        <label for="docAddress" class="form-label fw-semibold">
+                            Clinic / Residential Address
+                        </label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="text-danger small mt-1">{{ form.address.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Active Status -->
+                    <div class="mb-4 form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            Active Doctor (Available for patient appointments and duty scheduling)
+                        </label>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="{% url 'doctor_list' %}" class="btn btn-outline-secondary btn-sm">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-sm px-4">
+                            <i class="fa-solid fa-user-plus me-1"></i> Register Doctor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Frontend Validation Script for Doctor Registration Form -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('doctorRegisterForm');
+    const nameInput = document.getElementById('docFullName');
+    const emailInput = document.getElementById('docEmail');
+    const phoneInput = document.getElementById('docPhone');
+    const qualInput = document.getElementById('docQualification');
+    const deptInput = document.getElementById('docDepartment');
+    const catInput = document.getElementById('docCategory');
+    const expInput = document.getElementById('docExperience');
+    const feeInput = document.getElementById('docFee');
+
+    const alertBox = document.getElementById('docFrontendAlert');
+    const closeAlertBtn = document.getElementById('docCloseAlertBtn');
+
+    if (closeAlertBtn) {
+        closeAlertBtn.addEventListener('click', () => alertBox.classList.add('d-none'));
+    }
+
+    function setStatus(input, isValid, errorId, msg) {
+        const errorEl = document.getElementById(errorId);
+        if (isValid) {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            return true;
+        } else {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            if (errorEl && msg) errorEl.textContent = msg;
+            return false;
+        }
+    }
+
+    // Name Validation
+    function valName() {
+        if (!nameInput) return true;
+        const val = nameInput.value.trim();
+        return setStatus(nameInput, val.length >= 3, 'nameError', 'Doctor name is required (min 3 characters).');
+    }
+
+    // Email Validation
+    function valEmail() {
+        if (!emailInput) return true;
+        const val = emailInput.value.trim();
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return setStatus(emailInput, regex.test(val), 'emailError', 'Please enter a valid email format (e.g. doctor@clinicon.com).');
+    }
+
+    // Phone Validation
+    function valPhone() {
+        if (!phoneInput) return true;
+        const val = phoneInput.value.trim();
+        return setStatus(phoneInput, val.length >= 8, 'phoneError', 'Please enter a valid phone number (at least 8 digits).');
+    }
+
+    // Qualification Validation
+    function valQual() {
+        if (!qualInput) return true;
+        const val = qualInput.value.trim();
+        return setStatus(qualInput, val.length >= 2, 'qualError', 'Qualification is required (e.g. MBBS, MD).');
+    }
+
+    // Department Validation
+    function valDept() {
+        if (!deptInput) return true;
+        const val = deptInput.value.trim();
+        return setStatus(deptInput, val !== '', 'deptError', 'Please select a hospital department.');
+    }
+
+    // Category Validation
+    function valCat() {
+        if (!catInput) return true;
+        const val = catInput.value.trim();
+        return setStatus(catInput, val !== '', 'catError', 'Please select a doctor category / specialization.');
+    }
+
+    // Experience Validation
+    function valExp() {
+        if (!expInput) return true;
+        const val = parseFloat(expInput.value);
+        return setStatus(expInput, !isNaN(val) && val >= 0, 'expError', 'Experience cannot be negative.');
+    }
+
+    // Fee Validation
+    function valFee() {
+        if (!feeInput) return true;
+        const val = parseFloat(feeInput.value);
+        return setStatus(feeInput, !isNaN(val) && val >= 0, 'feeError', 'Consultation fee must be 0 or greater.');
+    }
+
+    // Live validation event listeners
+    if (nameInput) { nameInput.addEventListener('input', valName); nameInput.addEventListener('blur', valName); }
+    if (emailInput) { emailInput.addEventListener('input', valEmail); emailInput.addEventListener('blur', valEmail); }
+    if (phoneInput) { phoneInput.addEventListener('input', valPhone); phoneInput.addEventListener('blur', valPhone); }
+    if (qualInput) { qualInput.addEventListener('input', valQual); qualInput.addEventListener('blur', valQual); }
+    if (deptInput) { deptInput.addEventListener('change', valDept); deptInput.addEventListener('blur', valDept); }
+    if (catInput) { catInput.addEventListener('change', valCat); catInput.addEventListener('blur', valCat); }
+    if (expInput) { expInput.addEventListener('input', valExp); expInput.addEventListener('blur', valExp); }
+    if (feeInput) { feeInput.addEventListener('input', valFee); feeInput.addEventListener('blur', valFee); }
+
+    // Form submission validation
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            const ok = valName() && valEmail() && valPhone() && valQual() && valDept() && valCat() && valExp() && valFee();
+            if (!ok) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (alertBox) alertBox.classList.remove('d-none');
+                const firstInvalid = form.querySelector('.is-invalid');
+                if (firstInvalid) firstInvalid.focus();
+            } else {
+                if (alertBox) alertBox.classList.add('d-none');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

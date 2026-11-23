@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ title }} - Clinic On{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -13,31 +14,54 @@
         </div>
 
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <span>{{ title }}</span>
+                <span class="badge bg-light text-muted border small" style="font-size: 0.72rem;">Frontend Validated</span>
             </div>
             <div class="card-body p-4">
-                <form method="POST">
+                <!-- Client-side Error Alert Container -->
+                <div id="frontendAlert" class="alert alert-danger alert-dismissible fade show d-none small py-2 px-3 mb-3" role="alert">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i>
+                    <span id="frontendAlertMsg">Please correct the highlighted errors before saving.</span>
+                    <button type="button" class="btn-close py-2" id="closeAlertBtn" aria-label="Close"></button>
+                </div>
+
+                <form method="POST" id="categoryForm" novalidate>
                     {% csrf_token %}
 
-                    <!-- Category Name -->
+                    <!-- Category Name Input -->
                     <div class="mb-3">
                         <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
                             Category Name <span class="text-danger">*</span>
                         </label>
                         {{ form.name }}
+                        <div class="invalid-feedback" id="nameFeedback">
+                            Category name is required (minimum 3 characters, cannot be empty or just numbers/symbols).
+                        </div>
+                        <div class="valid-feedback small text-success">
+                            <i class="fa-solid fa-check me-1"></i>Looks good!
+                        </div>
                         {% if form.name.errors %}
                             <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
                         {% endif %}
+                        <small class="text-muted d-block mt-1" style="font-size: 0.76rem;">
+                            e.g. Senior Cardiologist, Resident Neurologist, Pediatric Surgeon
+                        </small>
                     </div>
 
-                    <!-- Department & Fee -->
+                    <!-- Department & Fee Inputs -->
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="{{ form.department.id_for_label }}" class="form-label fw-semibold">
                                 Department <span class="text-danger">*</span>
                             </label>
                             {{ form.department }}
+                            <div class="invalid-feedback" id="deptFeedback">
+                                Please select a hospital department.
+                            </div>
+                            <div class="valid-feedback small text-success">
+                                <i class="fa-solid fa-check me-1"></i>Department selected
+                            </div>
                             {% if form.department.errors %}
                                 <div class="text-danger small mt-1">{{ form.department.errors.0 }}</div>
                             {% endif %}
@@ -48,6 +72,12 @@
                                 Consultation Fee (₹) <span class="text-danger">*</span>
                             </label>
                             {{ form.consultation_fee }}
+                            <div class="invalid-feedback" id="feeFeedback">
+                                Please enter a valid consultation fee (must be 0 or greater).
+                            </div>
+                            <div class="valid-feedback small text-success">
+                                <i class="fa-solid fa-check me-1"></i>Valid fee amount
+                            </div>
                             {% if form.consultation_fee.errors %}
                                 <div class="text-danger small mt-1">{{ form.consultation_fee.errors.0 }}</div>
                             {% endif %}
@@ -60,6 +90,13 @@
                             Description
                         </label>
                         {{ form.description }}
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted" style="font-size: 0.76rem;">Brief scope of qualifications or clinical duties.</small>
+                            <small id="charCounter" class="text-muted" style="font-size: 0.76rem;">0 / 500</small>
+                        </div>
+                        <div class="invalid-feedback" id="descFeedback">
+                            Description cannot exceed 500 characters.
+                        </div>
                         {% if form.description.errors %}
                             <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
                         {% endif %}
@@ -78,7 +115,8 @@
                         <a href="{% url 'category_list' %}" class="btn btn-outline-secondary btn-sm">
                             Cancel
                         </a>
-                        <button type="submit" class="btn btn-primary btn-sm px-3">
+                        <button type="submit" class="btn btn-primary btn-sm px-3" id="saveCategoryBtn">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>
                             {% if is_edit %}Save Changes{% else %}Save Category{% endif %}
                         </button>
                     </div>
@@ -87,4 +125,178 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Task 1: Frontend Validation Script for Category Input -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('categoryForm');
+    const nameInput = document.getElementById('id_name');
+    const deptInput = document.getElementById('id_department');
+    const feeInput = document.getElementById('id_consultation_fee');
+    const descInput = document.getElementById('id_description');
+    const charCounter = document.getElementById('charCounter');
+    const frontendAlert = document.getElementById('frontendAlert');
+    const frontendAlertMsg = document.getElementById('frontendAlertMsg');
+    const closeAlertBtn = document.getElementById('closeAlertBtn');
+
+    if (closeAlertBtn) {
+        closeAlertBtn.addEventListener('click', () => {
+            frontendAlert.classList.add('d-none');
+        });
+    }
+
+    // Helper: Show error on an input
+    function setInvalid(input, errorElement, message) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+        if (errorElement && message) {
+            errorElement.textContent = message;
+        }
+        return false;
+    }
+
+    // Helper: Mark input as valid
+    function setValid(input) {
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+        return true;
+    }
+
+    // 1. Category Name Validation
+    function validateName() {
+        if (!nameInput) return true;
+        const val = nameInput.value.trim();
+        const errorEl = document.getElementById('nameFeedback');
+
+        if (!val) {
+            return setInvalid(nameInput, errorEl, 'Category name is required.');
+        }
+        if (val.length < 3) {
+            return setInvalid(nameInput, errorEl, 'Category name must be at least 3 characters long.');
+        }
+        if (val.length > 100) {
+            return setInvalid(nameInput, errorEl, 'Category name cannot exceed 100 characters.');
+        }
+        // Must contain at least one letter
+        if (!/[a-zA-Z]/.test(val)) {
+            return setInvalid(nameInput, errorEl, 'Category name must contain alphabetic characters.');
+        }
+        return setValid(nameInput);
+    }
+
+    // 2. Department Validation
+    function validateDepartment() {
+        if (!deptInput) return true;
+        const val = deptInput.value.trim();
+        const errorEl = document.getElementById('deptFeedback');
+
+        if (!val || val === '') {
+            return setInvalid(deptInput, errorEl, 'Please select a hospital department.');
+        }
+        return setValid(deptInput);
+    }
+
+    // 3. Consultation Fee Validation
+    function validateFee() {
+        if (!feeInput) return true;
+        const val = feeInput.value.trim();
+        const errorEl = document.getElementById('feeFeedback');
+
+        if (val === '') {
+            return setInvalid(feeInput, errorEl, 'Consultation fee is required.');
+        }
+        const num = parseFloat(val);
+        if (isNaN(num)) {
+            return setInvalid(feeInput, errorEl, 'Please enter a valid numeric fee amount.');
+        }
+        if (num < 0) {
+            return setInvalid(feeInput, errorEl, 'Consultation fee cannot be negative.');
+        }
+        if (num > 100000) {
+            return setInvalid(feeInput, errorEl, 'Consultation fee seems unusually high (max ₹1,00,000).');
+        }
+        return setValid(feeInput);
+    }
+
+    // 4. Description Validation & Char Counter
+    function validateDescription() {
+        if (!descInput) return true;
+        const val = descInput.value;
+        const len = val.length;
+        if (charCounter) {
+            charCounter.textContent = `${len} / 500`;
+            if (len > 500) {
+                charCounter.classList.add('text-danger');
+            } else {
+                charCounter.classList.remove('text-danger');
+            }
+        }
+        const errorEl = document.getElementById('descFeedback');
+        if (len > 500) {
+            return setInvalid(descInput, errorEl, 'Description cannot exceed 500 characters.');
+        } else if (len > 0) {
+            setValid(descInput);
+        } else {
+            descInput.classList.remove('is-invalid', 'is-valid');
+        }
+        return true;
+    }
+
+    // Real-time Event Listeners for Live Frontend Validation
+    if (nameInput) {
+        nameInput.addEventListener('input', validateName);
+        nameInput.addEventListener('blur', validateName);
+    }
+
+    if (deptInput) {
+        deptInput.addEventListener('change', validateDepartment);
+        deptInput.addEventListener('blur', validateDepartment);
+    }
+
+    if (feeInput) {
+        feeInput.addEventListener('input', validateFee);
+        feeInput.addEventListener('blur', validateFee);
+    }
+
+    if (descInput) {
+        descInput.addEventListener('input', validateDescription);
+        descInput.addEventListener('blur', validateDescription);
+        // Initial character count
+        validateDescription();
+    }
+
+    // Form Submit Event Handler
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            const isNameValid = validateName();
+            const isDeptValid = validateDepartment();
+            const isFeeValid = validateFee();
+            const isDescValid = validateDescription();
+
+            if (!isNameValid || !isDeptValid || !isFeeValid || !isDescValid) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                // Show alert
+                if (frontendAlert) {
+                    frontendAlert.classList.remove('d-none');
+                    frontendAlertMsg.textContent = 'Please correct the highlighted errors in the form before saving.';
+                }
+
+                // Focus first invalid element
+                const firstInvalid = form.querySelector('.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                }
+            } else {
+                if (frontendAlert) {
+                    frontendAlert.classList.add('d-none');
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

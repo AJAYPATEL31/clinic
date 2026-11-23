@@ -1,6 +1,6 @@
 from django.test import TestCase, Client
 from django.urls import reverse
-from hospital.models import CustomUser, UserRegistration, LoginLog, Department, DoctorCategory
+from hospital.models import CustomUser, UserRegistration, LoginLog, Department, DoctorCategory, DoctorRegister
 
 
 class ClinicOnProjectTests(TestCase):
@@ -158,3 +158,93 @@ class ClinicOnProjectTests(TestCase):
         response = self.client.post(reverse('category_delete', args=[self.category.pk]), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(DoctorCategory.objects.filter(pk=self.category.pk).exists())
+
+    # ----------------------------------------------------
+    # New Task Tests: Frontend Validation & Doctor Registration
+    # ----------------------------------------------------
+    def test_category_frontend_validation_markup(self):
+        """Task 1: Category form includes frontend validation attributes & script"""
+        self.client.login(username=self.admin_email, password=self.admin_password)
+        response = self.client.get(reverse('category_add'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        # Check form id and novalidate
+        self.assertIn('id="categoryForm"', content)
+        self.assertIn('novalidate', content)
+        # Check invalid-feedback containers
+        self.assertIn('invalid-feedback', content)
+        self.assertIn('nameFeedback', content)
+        self.assertIn('feeFeedback', content)
+        # Check frontend validation JS
+        self.assertIn('validateName', content)
+        self.assertIn('validateDepartment', content)
+        self.assertIn('validateFee', content)
+
+    def test_doctor_register_model_and_creation(self):
+        """Task 2: Use DoctorRegister model to store doctor details"""
+        doc = DoctorRegister.objects.create(
+            full_name='Dr. Test Kumar',
+            email='test.kumar@clinicon.com',
+            phone='+91 99999 88888',
+            department=self.department,
+            category=self.category,
+            qualification='MBBS, MD',
+            experience_years=8,
+            consultation_fee=900.00,
+            room_number='OPD 101'
+        )
+        self.assertEqual(DoctorRegister.objects.count(), 1)
+        self.assertIn('Dr. Dr. Test Kumar', str(doc))
+
+    def test_manual_doctor_registration_view(self):
+        """Task 3: Manual doctor registration form in HTML (GET & POST)"""
+        self.client.login(username=self.admin_email, password=self.admin_password)
+        # GET form page
+        get_resp = self.client.get(reverse('doctor_register'))
+        self.assertEqual(get_resp.status_code, 200)
+        self.assertTemplateUsed(get_resp, 'hospital/doctor_register.html')
+        content = get_resp.content.decode('utf-8')
+        self.assertIn('Manual Doctor Registration', content)
+        self.assertIn('id="doctorRegisterForm"', content)
+
+        # POST form submission
+        post_resp = self.client.post(reverse('doctor_register'), {
+            'full_name': 'Anil Deshmukh',
+            'email': 'dr.anil@clinicon.com',
+            'phone': '+91 91234 56789',
+            'department': self.department.id,
+            'category': self.category.id,
+            'qualification': 'MBBS, MS (General Surgery)',
+            'experience_years': 10,
+            'consultation_fee': '750.00',
+            'room_number': 'Cabin 202',
+            'address': 'Staff Quarters, Clinic On',
+            'is_active': True,
+        }, follow=True)
+
+        self.assertEqual(post_resp.status_code, 200)
+        self.assertTrue(DoctorRegister.objects.filter(email='dr.anil@clinicon.com').exists())
+
+    def test_doctor_list_and_delete_view(self):
+        """Test Doctor listing table and delete functionality"""
+        self.client.login(username=self.admin_email, password=self.admin_password)
+        doc = DoctorRegister.objects.create(
+            full_name='Vikram Seth',
+            email='dr.vikram@clinicon.com',
+            phone='+91 95555 44444',
+            department=self.department,
+            category=self.category,
+            qualification='MBBS',
+            experience_years=4,
+            consultation_fee=500.00
+        )
+        # Listing table
+        list_resp = self.client.get(reverse('doctor_list'))
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertIn('Vikram Seth', list_resp.content.decode('utf-8'))
+
+        # Delete
+        del_resp = self.client.post(reverse('doctor_delete', args=[doc.pk]), follow=True)
+        self.assertEqual(del_resp.status_code, 200)
+        self.assertFalse(DoctorRegister.objects.filter(pk=doc.pk).exists())
+

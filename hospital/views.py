@@ -4,8 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Count
 from django.utils import timezone
-from .models import DoctorCategory, Department, LoginLog, CustomUser
-from .forms import AdminLoginForm, DoctorCategoryForm, DepartmentForm
+from .models import DoctorCategory, Department, LoginLog, CustomUser, DoctorRegister
+from .forms import AdminLoginForm, DoctorCategoryForm, DepartmentForm, DoctorRegisterForm
 
 
 def get_client_ip(request):
@@ -92,19 +92,25 @@ def admin_dashboard_view(request):
     active_categories = DoctorCategory.objects.filter(is_active=True).count()
     total_departments = Department.objects.count()
     active_departments = Department.objects.filter(is_active=True).count()
+    total_doctors = DoctorRegister.objects.count()
+    active_doctors = DoctorRegister.objects.filter(is_active=True).count()
 
     recent_categories = DoctorCategory.objects.select_related('department').order_by('-created_at')[:6]
     departments_summary = Department.objects.annotate(cat_count=Count('doctor_categories'))[:5]
     recent_logins = LoginLog.objects.filter(user=request.user).order_by('-login_time')[:5]
+    recent_doctors = DoctorRegister.objects.select_related('department', 'category').order_by('-registration_date')[:5]
 
     context = {
         'total_categories': total_categories,
         'active_categories': active_categories,
         'total_departments': total_departments,
         'active_departments': active_departments,
+        'total_doctors': total_doctors,
+        'active_doctors': active_doctors,
         'recent_categories': recent_categories,
         'departments_summary': departments_summary,
         'recent_logins': recent_logins,
+        'recent_doctors': recent_doctors,
     }
     return render(request, 'hospital/dashboard.html', context)
 
@@ -275,3 +281,86 @@ def department_delete_view(request, pk):
         messages.success(request, f"Department '{dept_name}' deleted successfully.")
         return redirect('department_list')
     return render(request, 'hospital/department_confirm_delete.html', {'department': dept})
+
+
+# ==========================================
+# Task: Manual Doctor Registration & Listing Views
+# ==========================================
+
+@login_required(login_url='login')
+def doctor_register_view(request):
+    """
+    Task 2 & 3: Manual doctor registration view using DoctorRegister model
+    """
+    if request.method == 'POST':
+        form = DoctorRegisterForm(request.POST)
+        if form.is_valid():
+            doctor = form.save()
+            messages.success(request, f"Doctor Dr. {doctor.full_name} registered successfully!")
+            return redirect('doctor_list')
+        else:
+            messages.error(request, "Please check the form and fix any highlighted errors.")
+    else:
+        form = DoctorRegisterForm()
+
+    departments = Department.objects.filter(is_active=True)
+    categories = DoctorCategory.objects.filter(is_active=True).select_related('department')
+
+    return render(request, 'hospital/doctor_register.html', {
+        'form': form,
+        'departments': departments,
+        'categories': categories,
+        'title': 'Manual Doctor Registration',
+    })
+
+
+@login_required(login_url='login')
+def doctor_list_view(request):
+    """
+    View list of all registered doctors with search and filter
+    """
+    search_query = request.GET.get('q', '').strip()
+    selected_dept = request.GET.get('department', '').strip()
+    selected_cat = request.GET.get('category', '').strip()
+
+    doctors = DoctorRegister.objects.select_related('department', 'category').all()
+
+    if search_query:
+        doctors = doctors.filter(
+            Q(full_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(phone__icontains=search_query) |
+            Q(qualification__icontains=search_query)
+        )
+
+    if selected_dept:
+        doctors = doctors.filter(department_id=selected_dept)
+
+    if selected_cat:
+        doctors = doctors.filter(category_id=selected_cat)
+
+    departments = Department.objects.filter(is_active=True)
+    categories = DoctorCategory.objects.filter(is_active=True)
+
+    return render(request, 'hospital/doctor_list.html', {
+        'doctors': doctors,
+        'departments': departments,
+        'categories': categories,
+        'search_query': search_query,
+        'selected_dept': selected_dept,
+        'selected_cat': selected_cat,
+        'total_doctors': doctors.count(),
+    })
+
+
+@login_required(login_url='login')
+def doctor_delete_view(request, pk):
+    """Delete a registered doctor"""
+    doctor = get_object_or_404(DoctorRegister, pk=pk)
+    if request.method == 'POST':
+        name = doctor.full_name
+        doctor.delete()
+        messages.success(request, f"Doctor Dr. {name} has been removed.")
+        return redirect('doctor_list')
+    return render(request, 'hospital/doctor_confirm_delete.html', {'doctor': doctor})
+
