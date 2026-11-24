@@ -290,16 +290,18 @@ def department_delete_view(request, pk):
 @login_required(login_url='login')
 def doctor_register_view(request):
     """
-    Task 2 & 3: Manual doctor registration view using DoctorRegister model
+    Task 1 & 2: Form handling in Django views, input validation, upload & save doctor photo.
     """
     if request.method == 'POST':
-        form = DoctorRegisterForm(request.POST)
+        # Handles both text data (POST) and file uploads (FILES)
+        form = DoctorRegisterForm(request.POST, request.FILES)
         if form.is_valid():
             doctor = form.save()
-            messages.success(request, f"Doctor Dr. {doctor.full_name} registered successfully!")
-            return redirect('doctor_list')
+            messages.success(request, f"Doctor Dr. {doctor.full_name} has been successfully registered!")
+            # Task 3: Display confirmation
+            return redirect('doctor_confirmation', pk=doctor.pk)
         else:
-            messages.error(request, "Please check the form and fix any highlighted errors.")
+            messages.error(request, "Form validation failed. Please correct the highlighted errors below.")
     else:
         form = DoctorRegisterForm()
 
@@ -312,6 +314,16 @@ def doctor_register_view(request):
         'categories': categories,
         'title': 'Manual Doctor Registration',
     })
+
+
+@login_required(login_url='login')
+def doctor_confirmation_view(request, pk):
+    """
+    Task 3: Display confirmation of registered doctor
+    """
+    doctor = get_object_or_404(DoctorRegister.objects.select_related('department', 'category'), pk=pk)
+    return render(request, 'hospital/doctor_confirmation.html', {'doctor': doctor})
+
 
 
 @login_required(login_url='login')

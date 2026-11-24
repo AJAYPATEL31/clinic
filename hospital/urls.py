@@ -25,5 +25,6 @@ urlpatterns = [
     # Doctor Registration URLs
     path('doctors/', views.doctor_list_view, name='doctor_list'),
     path('doctors/register/', views.doctor_register_view, name='doctor_register'),
+    path('doctors/<int:pk>/confirmation/', views.doctor_confirmation_view, name='doctor_confirmation'),
     path('doctors/<int:pk>/delete/', views.doctor_delete_view, name='doctor_delete'),
 ]

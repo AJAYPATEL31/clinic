@@ -16,7 +16,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>{{ title }}</span>
-                <span class="badge bg-primary-subtle text-primary border small" style="font-size: 0.72rem;">Manual Entry</span>
+                <span class="badge bg-primary-subtle text-primary border small" style="font-size: 0.72rem;">Manual Entry & Upload</span>
             </div>
             <div class="card-body p-4">
                 <!-- Frontend Validation Alert -->
@@ -26,12 +26,44 @@
                     <button type="button" class="btn-close py-2" id="docCloseAlertBtn" aria-label="Close"></button>
                 </div>
 
-                <form method="POST" id="doctorRegisterForm" novalidate>
+                <!-- Form handling with multipart/form-data for photo upload -->
+                <form method="POST" id="doctorRegisterForm" enctype="multipart/form-data" novalidate>
                     {% csrf_token %}
 
                     <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
-                        <i class="fa-solid fa-user-doctor text-primary me-2"></i>Doctor Personal & Contact Information
+                        <i class="fa-solid fa-user-doctor text-primary me-2"></i>Doctor Profile & Contact Information
                     </h6>
+
+                    <!-- Doctor Photo Upload with Live Preview (Task 2) -->
+                    <div class="row g-3 mb-4 align-items-center p-3 bg-light rounded-3">
+                        <div class="col-sm-auto text-center">
+                            <div class="position-relative d-inline-block">
+                                <img id="photoPreview" 
+                                     src="" 
+                                     alt="Doctor Photo Preview" 
+                                     class="rounded-circle border shadow-sm d-none" 
+                                     style="width: 85px; height: 85px; object-fit: cover;">
+                                <div id="photoPlaceholder" 
+                                     class="rounded-circle border bg-white d-flex align-items-center justify-content-center text-secondary mx-auto shadow-sm" 
+                                     style="width: 85px; height: 85px; font-size: 1.8rem;">
+                                    <i class="fa-solid fa-user-doctor"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <label for="docPhoto" class="form-label fw-semibold mb-1">
+                                Doctor Profile Picture / Photo <span class="text-muted small fw-normal">(Optional: JPG, PNG, WebP &bull; Max 5MB)</span>
+                            </label>
+                            {{ form.photo }}
+                            <div class="invalid-feedback" id="photoError">Please select a valid image file (JPG, PNG, or WebP) under 5MB.</div>
+                            {% if form.photo.errors %}
+                                <div class="text-danger small mt-1">{{ form.photo.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                A clear passport-size doctor headshot is recommended for directory listings and prescription headers.
+                            </small>
+                        </div>
+                    </div>
 
                     <!-- Full Name & Email Row -->
                     <div class="row g-3 mb-3">
@@ -102,7 +134,7 @@
 
                         <div class="col-md-6">
                             <label for="docCategory" class="form-label fw-semibold">
-                                Doctor Category / Role <span class="text-danger">*</span>
+                                Doctor Category / Specialization <span class="text-danger">*</span>
                             </label>
                             {{ form.category }}
                             <div class="invalid-feedback" id="catError">Please select a doctor category.</div>
@@ -186,10 +218,13 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Frontend Validation Script for Doctor Registration Form -->
+<!-- Frontend Validation and Live Photo Preview Script (Tasks 1 & 2) -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('doctorRegisterForm');
+    const photoInput = document.getElementById('docPhoto');
+    const photoPreview = document.getElementById('photoPreview');
+    const photoPlaceholder = document.getElementById('photoPlaceholder');
     const nameInput = document.getElementById('docFullName');
     const emailInput = document.getElementById('docEmail');
     const phoneInput = document.getElementById('docPhone');
@@ -204,6 +239,47 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (closeAlertBtn) {
         closeAlertBtn.addEventListener('click', () => alertBox.classList.add('d-none'));
+    }
+
+    // Live Photo Preview & Validation
+    if (photoInput && photoPreview && photoPlaceholder) {
+        photoInput.addEventListener('change', function () {
+            const file = this.files[0];
+            const errorEl = document.getElementById('photoError');
+            if (file) {
+                // Size validation: 5MB
+                if (file.size > 5 * 1024 * 1024) {
+                    photoInput.classList.add('is-invalid');
+                    if (errorEl) errorEl.textContent = 'Selected image exceeds 5MB size limit.';
+                    photoPreview.classList.add('d-none');
+                    photoPlaceholder.classList.remove('d-none');
+                    return;
+                }
+                // Type validation
+                if (!file.type.startsWith('image/')) {
+                    photoInput.classList.add('is-invalid');
+                    if (errorEl) errorEl.textContent = 'Only image files (JPG, PNG, WebP) are allowed.';
+                    photoPreview.classList.add('d-none');
+                    photoPlaceholder.classList.remove('d-none');
+                    return;
+                }
+
+                // Valid image: read and show preview
+                photoInput.classList.remove('is-invalid');
+                photoInput.classList.add('is-valid');
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    photoPreview.src = e.target.result;
+                    photoPreview.classList.remove('d-none');
+                    photoPlaceholder.classList.add('d-none');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                photoInput.classList.remove('is-invalid', 'is-valid');
+                photoPreview.classList.add('d-none');
+                photoPlaceholder.classList.remove('d-none');
+            }
+        });
     }
 
     function setStatus(input, isValid, errorId, msg) {

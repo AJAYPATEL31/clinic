@@ -29,6 +29,11 @@ env/
 ENV/
 .venv/
 
+# Media uploads
+media/
+doctor_test.png
+
+
 # IDE / Editor files
 .vscode/
 .idea/

@@ -200,6 +200,12 @@ class DoctorRegister(models.Model):
     full_name = models.CharField(max_length=150, verbose_name='Doctor Full Name')
     email = models.EmailField(unique=True, verbose_name='Email Address')
     phone = models.CharField(max_length=20, verbose_name='Contact Phone')
+    photo = models.ImageField(
+        upload_to='doctor_photos/',
+        blank=True,
+        null=True,
+        verbose_name='Doctor Photo'
+    )
     department = models.ForeignKey(
         Department,
         on_delete=models.CASCADE,

@@ -1,5 +1,6 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from hospital.models import CustomUser, UserRegistration, LoginLog, Department, DoctorCategory, DoctorRegister
 
 
@@ -206,8 +207,16 @@ class ClinicOnProjectTests(TestCase):
         content = get_resp.content.decode('utf-8')
         self.assertIn('Manual Doctor Registration', content)
         self.assertIn('id="doctorRegisterForm"', content)
+        self.assertIn('enctype="multipart/form-data"', content)
 
-        # POST form submission
+        # POST form submission with photo upload
+        small_image = (
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\n\x00\x00\x00\n'
+            b'\x08\x02\x00\x00\x00\x02PX\xea\x00\x00\x00\x13IDATx\x9cc\xfc\xcf'
+            b'\x80\x0f0\xe1\x95e\x18\xa9\xd2\x00A,\x01\x13y\xed\xba&\x00\x00\x00\x00IEND\xaeB`\x82'
+        )
+        photo = SimpleUploadedFile('doctor_test.png', small_image, content_type='image/png')
+
         post_resp = self.client.post(reverse('doctor_register'), {
             'full_name': 'Anil Deshmukh',
             'email': 'dr.anil@clinicon.com',
@@ -219,11 +228,37 @@ class ClinicOnProjectTests(TestCase):
             'consultation_fee': '750.00',
             'room_number': 'Cabin 202',
             'address': 'Staff Quarters, Clinic On',
+            'photo': photo,
             'is_active': True,
         }, follow=True)
 
         self.assertEqual(post_resp.status_code, 200)
-        self.assertTrue(DoctorRegister.objects.filter(email='dr.anil@clinicon.com').exists())
+        doctor = DoctorRegister.objects.filter(email='dr.anil@clinicon.com').first()
+        self.assertIsNotNone(doctor)
+        self.assertTrue(bool(doctor.photo))
+        # Checks confirmation page is displayed
+        self.assertTemplateUsed(post_resp, 'hospital/doctor_confirmation.html')
+        self.assertIn('Doctor Registration Confirmed', post_resp.content.decode('utf-8'))
+
+    def test_doctor_form_input_validation(self):
+        """Task 2: Validate form inputs on server side"""
+        self.client.login(username=self.admin_email, password=self.admin_password)
+        # Invalid: short name, negative fee, short phone
+        invalid_resp = self.client.post(reverse('doctor_register'), {
+            'full_name': 'A',
+            'email': 'invalid-email',
+            'phone': '123',
+            'department': self.department.id,
+            'category': self.category.id,
+            'qualification': '',
+            'experience_years': 0,
+            'consultation_fee': '-50.00',
+        })
+        self.assertEqual(invalid_resp.status_code, 200)
+        form = invalid_resp.context['form']
+        self.assertFormError(form, 'full_name', 'Doctor full name must be at least 3 characters long.')
+        self.assertFormError(form, 'phone', 'Please provide a valid contact number (at least 8 digits).')
+        self.assertFormError(form, 'consultation_fee', 'Consultation fee cannot be negative.')
 
     def test_doctor_list_and_delete_view(self):
         """Test Doctor listing table and delete functionality"""
@@ -247,4 +282,5 @@ class ClinicOnProjectTests(TestCase):
         del_resp = self.client.post(reverse('doctor_delete', args=[doc.pk]), follow=True)
         self.assertEqual(del_resp.status_code, 200)
         self.assertFalse(DoctorRegister.objects.filter(pk=doc.pk).exists())
+
 

@@ -98,12 +98,12 @@ class DepartmentForm(forms.ModelForm):
 
 class DoctorRegisterForm(forms.ModelForm):
     """
-    Form for manual Doctor Registration in HTML
+    Form for manual Doctor Registration in HTML with photo upload and validation
     """
     class Meta:
         model = DoctorRegister
         fields = [
-            'full_name', 'email', 'phone', 'department', 'category',
+            'full_name', 'email', 'phone', 'photo', 'department', 'category',
             'qualification', 'experience_years', 'consultation_fee',
             'room_number', 'address', 'is_active'
         ]
@@ -125,6 +125,11 @@ class DoctorRegisterForm(forms.ModelForm):
                 'id': 'docPhone',
                 'placeholder': '+91 98765 43210',
                 'required': True
+            }),
+            'photo': forms.FileInput(attrs={
+                'class': 'form-control',
+                'id': 'docPhoto',
+                'accept': 'image/*'
             }),
             'department': forms.Select(attrs={
                 'class': 'form-select',
@@ -173,4 +178,38 @@ class DoctorRegisterForm(forms.ModelForm):
                 'role': 'switch'
             }),
         }
+
+    def clean_full_name(self):
+        name = self.cleaned_data.get('full_name', '').strip()
+        if len(name) < 3:
+            raise forms.ValidationError("Doctor full name must be at least 3 characters long.")
+        return name
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone', '').strip()
+        # Remove common phone separators
+        digits = ''.join(filter(str.isdigit, phone))
+        if len(digits) < 8:
+            raise forms.ValidationError("Please provide a valid contact number (at least 8 digits).")
+        return phone
+
+    def clean_consultation_fee(self):
+        fee = self.cleaned_data.get('consultation_fee')
+        if fee is not None and fee < 0:
+            raise forms.ValidationError("Consultation fee cannot be negative.")
+        return fee
+
+    def clean_photo(self):
+        photo = self.cleaned_data.get('photo')
+        if photo:
+            # 5MB limit
+            max_size = 5 * 1024 * 1024
+            if photo.size > max_size:
+                raise forms.ValidationError("Doctor photo size must be less than 5MB.")
+            # Check content type / extension
+            valid_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+            if hasattr(photo, 'content_type') and photo.content_type not in valid_types:
+                raise forms.ValidationError("Please upload a valid image file (JPEG, PNG, or WebP).")
+        return photo
+
 

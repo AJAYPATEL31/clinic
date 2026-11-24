@@ -54,7 +54,8 @@ class DoctorCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(DoctorRegister)
 class DoctorRegisterAdmin(admin.ModelAdmin):
-    list_display = ('full_name', 'email', 'phone', 'department', 'category', 'qualification', 'is_active')
+    list_display = ('full_name', 'email', 'phone', 'department', 'category', 'qualification', 'photo', 'is_active')
     list_filter = ('department', 'category', 'is_active')
     search_fields = ('full_name', 'email', 'phone', 'qualification')
+
 
