@@ -92,7 +92,7 @@
                             <th>Fee (₹)</th>
                             <th>Contact</th>
                             <th>Status</th>
-                            <th class="text-end" style="width: 110px;">Actions</th>
+                            <th class="text-end" style="width: 140px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -143,11 +143,14 @@
                                         <span class="badge-soft-secondary">Inactive</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-end">
-                                    <a href="{% url 'doctor_confirmation' doc.pk %}" class="btn btn-outline-primary btn-sm py-0 px-2" title="View Confirmation / Profile">
+                                <td class="text-end text-nowrap">
+                                    <a href="{% url 'doctor_edit' doc.pk %}" class="btn btn-outline-secondary btn-sm py-0 px-2" title="Edit Doctor Details">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                    <a href="{% url 'doctor_confirmation' doc.pk %}" class="btn btn-outline-primary btn-sm py-0 px-2 ms-1" title="View Profile / ID Card">
                                         <i class="fa-solid fa-id-card"></i>
                                     </a>
-                                    <a href="{% url 'doctor_delete' doc.pk %}" class="btn btn-outline-danger btn-sm py-0 px-2 ms-1" title="Delete">
+                                    <a href="{% url 'doctor_delete' doc.pk %}" class="btn btn-outline-danger btn-sm py-0 px-2 ms-1" title="Delete Doctor">
                                         <i class="fa-solid fa-trash"></i>
                                     </a>
                                 </td>

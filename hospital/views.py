@@ -325,6 +325,39 @@ def doctor_confirmation_view(request, pk):
     return render(request, 'hospital/doctor_confirmation.html', {'doctor': doctor})
 
 
+@login_required(login_url='login')
+def doctor_edit_view(request, pk):
+    """
+    Task 2: Implement edit doctor functionality with prefilled form
+    """
+    doctor = get_object_or_404(DoctorRegister, pk=pk)
+    if request.method == 'POST':
+        # Form handling: pass POST data, uploaded files, and the existing doctor instance
+        form = DoctorRegisterForm(request.POST, request.FILES, instance=doctor)
+        if form.is_valid():
+            doctor = form.save()
+            messages.success(request, f"Doctor Dr. {doctor.full_name}'s information has been updated successfully!")
+            return redirect('doctor_list')
+        else:
+            messages.error(request, "Please correct the highlighted errors below before saving.")
+    else:
+        # GET request: prefill form with existing doctor data
+        form = DoctorRegisterForm(instance=doctor)
+
+    departments = Department.objects.filter(is_active=True)
+    categories = DoctorCategory.objects.filter(is_active=True).select_related('department')
+
+    return render(request, 'hospital/doctor_edit.html', {
+        'form': form,
+        'doctor': doctor,
+        'departments': departments,
+        'categories': categories,
+        'title': f"Edit Doctor: Dr. {doctor.full_name}",
+        'is_edit': True,
+    })
+
+
+
 
 @login_required(login_url='login')
 def doctor_list_view(request):

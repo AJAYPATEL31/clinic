@@ -283,4 +283,104 @@ class ClinicOnProjectTests(TestCase):
         self.assertEqual(del_resp.status_code, 200)
         self.assertFalse(DoctorRegister.objects.filter(pk=doc.pk).exists())
 
+    def test_doctor_edit_view_get_prefill(self):
+        """Task 1 & 2: Doctor Edit view loads prefilled form with doctor data"""
+        self.client.login(username=self.admin_email, password=self.admin_password)
+        doc = DoctorRegister.objects.create(
+            full_name='Sunita Rao',
+            email='dr.sunita@clinicon.com',
+            phone='+91 98888 77777',
+            department=self.department,
+            category=self.category,
+            qualification='MBBS, DNB (Cardiology)',
+            experience_years=12,
+            consultation_fee=1200.00,
+            room_number='OPD 305',
+            is_active=True
+        )
+
+        edit_url = reverse('doctor_edit', args=[doc.pk])
+        resp = self.client.get(edit_url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'hospital/doctor_edit.html')
+
+        content = resp.content.decode('utf-8')
+        # Check prefilled values in HTML form
+        self.assertIn('Sunita Rao', content)
+        self.assertIn('dr.sunita@clinicon.com', content)
+        self.assertIn('+91 98888 77777', content)
+        self.assertIn('MBBS, DNB (Cardiology)', content)
+        self.assertIn('1200', content)
+        self.assertIn('OPD 305', content)
+        self.assertIn('Edit Doctor - Dr. Sunita Rao', content)
+
+    def test_doctor_edit_view_post_update(self):
+        """Task 2: Doctor Edit view successfully updates doctor details"""
+        self.client.login(username=self.admin_email, password=self.admin_password)
+        doc = DoctorRegister.objects.create(
+            full_name='Manoj Verma',
+            email='dr.manoj@clinicon.com',
+            phone='+91 97777 66666',
+            department=self.department,
+            category=self.category,
+            qualification='MBBS',
+            experience_years=5,
+            consultation_fee=600.00,
+            room_number='OPD 102',
+            is_active=True
+        )
+
+        edit_url = reverse('doctor_edit', args=[doc.pk])
+        update_data = {
+            'full_name': 'Manoj K. Verma',
+            'email': 'dr.manoj.updated@clinicon.com',
+            'phone': '+91 97777 88888',
+            'department': self.department.id,
+            'category': self.category.id,
+            'qualification': 'MBBS, MD (Medicine)',
+            'experience_years': 7,
+            'consultation_fee': '850.00',
+            'room_number': 'OPD 204',
+            'address': 'Senior Doctors Block A',
+            'is_active': True,
+        }
+
+        resp = self.client.post(edit_url, update_data, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'hospital/doctor_list.html')
+
+        # Check DB update
+        doc.refresh_from_db()
+        self.assertEqual(doc.full_name, 'Manoj K. Verma')
+        self.assertEqual(doc.email, 'dr.manoj.updated@clinicon.com')
+        self.assertEqual(doc.phone, '+91 97777 88888')
+        self.assertEqual(doc.qualification, 'MBBS, MD (Medicine)')
+        self.assertEqual(doc.experience_years, 7)
+        self.assertEqual(float(doc.consultation_fee), 850.00)
+        self.assertEqual(doc.room_number, 'OPD 204')
+
+    def test_doctor_confirm_delete_get_view(self):
+        """Task 3: Doctor Delete GET view renders confirmation page with doctor info"""
+        self.client.login(username=self.admin_email, password=self.admin_password)
+        doc = DoctorRegister.objects.create(
+            full_name='Ramesh Dave',
+            email='dr.ramesh@clinicon.com',
+            phone='+91 94444 33333',
+            department=self.department,
+            category=self.category,
+            qualification='MBBS, MS',
+            experience_years=9,
+            consultation_fee=800.00
+        )
+
+        del_url = reverse('doctor_delete', args=[doc.pk])
+        resp = self.client.get(del_url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'hospital/doctor_confirm_delete.html')
+        content = resp.content.decode('utf-8')
+        self.assertIn('Ramesh Dave', content)
+        self.assertIn('Confirm Doctor Removal', content)
+        self.assertIn('Cardiology', content)
+
+
 
