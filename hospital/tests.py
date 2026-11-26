@@ -382,5 +382,140 @@ class ClinicOnProjectTests(TestCase):
         self.assertIn('Confirm Doctor Removal', content)
         self.assertIn('Cardiology', content)
 
+    # ----------------------------------------------------
+    # Today's Tasks Tests:
+    # 1. Pagination & Search on Doctor List
+    # 2. Authenticated Admin User Access Restrictions
+    # 3. User / Admin Registration HTML Page & Form Handling
+    # ----------------------------------------------------
+
+    def test_doctor_pagination_and_search(self):
+        """Task 1: Pagination and search on doctor listing view and HTML page"""
+        self.client.login(username=self.admin_email, password=self.admin_password)
+
+        # Create 8 doctors to test pagination (default 6 per page)
+        doctors = []
+        for i in range(1, 9):
+            doctors.append(DoctorRegister(
+                full_name=f'Doctor Number {i}',
+                email=f'doc{i}@clinicon.com',
+                phone=f'+91 90000 0000{i}',
+                department=self.department,
+                category=self.category,
+                qualification=f'MBBS {i}',
+                experience_years=i,
+                consultation_fee=500.00 + (i * 50)
+            ))
+        DoctorRegister.objects.bulk_create(doctors)
+
+        # Page 1
+        resp_p1 = self.client.get(reverse('doctor_list'))
+        self.assertEqual(resp_p1.status_code, 200)
+        self.assertTrue(resp_p1.context['is_paginated'])
+        self.assertEqual(len(resp_p1.context['doctors']), 6)
+        self.assertEqual(resp_p1.context['page_obj'].number, 1)
+        self.assertEqual(resp_p1.context['paginator'].num_pages, 2)
+        content_p1 = resp_p1.content.decode('utf-8')
+        self.assertIn('Page', content_p1)
+        self.assertIn('pagination', content_p1)
+
+        # Page 2
+        resp_p2 = self.client.get(reverse('doctor_list') + '?page=2')
+        self.assertEqual(resp_p2.status_code, 200)
+        self.assertEqual(len(resp_p2.context['doctors']), 2)
+        self.assertEqual(resp_p2.context['page_obj'].number, 2)
+
+        # Search filter
+        search_resp = self.client.get(reverse('doctor_list') + '?q=Doctor Number 3')
+        self.assertEqual(search_resp.status_code, 200)
+        self.assertEqual(search_resp.context['total_doctors'], 1)
+        self.assertIn('Doctor Number 3', search_resp.content.decode('utf-8'))
+
+    def test_admin_access_restrictions(self):
+        """Task 2: Restrict access to authenticated admin users in views and HTML"""
+        # 1. Unauthenticated access should redirect to login
+        anon_resp = self.client.get(reverse('doctor_register'))
+        self.assertEqual(anon_resp.status_code, 302)
+        self.assertIn('/login/', anon_resp.url)
+
+        # 2. Authenticated non-admin staff user should get 403 Forbidden with access_denied page
+        staff_user = CustomUser.objects.create_user(
+            email='staffmember@clinicon.com',
+            password='staffpassword123',
+            role='Staff',
+            is_staff=False,
+            is_superuser=False
+        )
+        self.client.login(username='staffmember@clinicon.com', password='staffpassword123')
+
+        restricted_resp = self.client.get(reverse('doctor_register'))
+        self.assertEqual(restricted_resp.status_code, 403)
+        self.assertTemplateUsed(restricted_resp, 'hospital/access_denied.html')
+        self.assertIn('Administrator Privileges Required', restricted_resp.content.decode('utf-8'))
+
+        # Also restricted on dashboard
+        dash_resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(dash_resp.status_code, 403)
+
+        # 3. Authenticated admin user should have full access (200 OK)
+        self.client.login(username=self.admin_email, password=self.admin_password)
+        admin_resp = self.client.get(reverse('doctor_register'))
+        self.assertEqual(admin_resp.status_code, 200)
+
+    def test_user_registration_page_get_and_post(self):
+        """Task 3: Registration HTML page with proper fields and form handling"""
+        # GET registration page
+        get_resp = self.client.get(reverse('register'))
+        self.assertEqual(get_resp.status_code, 200)
+        self.assertTemplateUsed(get_resp, 'hospital/register.html')
+        content = get_resp.content.decode('utf-8')
+
+        # Check required fields exist in HTML
+        self.assertIn('name="full_name"', content)
+        self.assertIn('name="email"', content)
+        self.assertIn('name="contact_number"', content)
+        self.assertIn('name="role"', content)
+        self.assertIn('name="department_name"', content)
+        self.assertIn('name="password"', content)
+        self.assertIn('name="confirm_password"', content)
+
+        # POST valid registration
+        post_resp = self.client.post(reverse('register'), {
+            'full_name': 'Dr. Alok Verma',
+            'email': 'dr.alok@clinicon.com',
+            'contact_number': '+91 98888 12345',
+            'department_name': 'Neurology',
+            'role': 'Admin',
+            'password': 'securepassword123',
+            'confirm_password': 'securepassword123',
+        }, follow=True)
+
+        self.assertEqual(post_resp.status_code, 200)
+        # Should redirect to login page with success message
+        self.assertTemplateUsed(post_resp, 'hospital/login.html')
+        self.assertIn('Registration successful', post_resp.content.decode('utf-8'))
+
+        # Verify user and registration record in database
+        new_user = CustomUser.objects.filter(email='dr.alok@clinicon.com').first()
+        self.assertIsNotNone(new_user)
+        self.assertEqual(new_user.role, 'Admin')
+        self.assertTrue(new_user.is_staff)
+        self.assertTrue(UserRegistration.objects.filter(email='dr.alok@clinicon.com').exists())
+
+        # POST with password mismatch
+        mismatch_resp = self.client.post(reverse('register'), {
+            'full_name': 'Mismatched User',
+            'email': 'mismatch@clinicon.com',
+            'contact_number': '+91 98888 99999',
+            'department_name': 'Administration',
+            'role': 'Staff',
+            'password': 'password123',
+            'confirm_password': 'differentpassword',
+        })
+        self.assertEqual(mismatch_resp.status_code, 200)
+        self.assertIn('Passwords do not match', mismatch_resp.content.decode('utf-8'))
+        self.assertFalse(CustomUser.objects.filter(email='mismatch@clinicon.com').exists())
+
+
 
 

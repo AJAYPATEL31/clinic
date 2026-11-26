@@ -1,11 +1,35 @@
+from functools import wraps
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Count
 from django.utils import timezone
-from .models import DoctorCategory, Department, LoginLog, CustomUser, DoctorRegister
-from .forms import AdminLoginForm, DoctorCategoryForm, DepartmentForm, DoctorRegisterForm
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from .models import DoctorCategory, Department, LoginLog, CustomUser, DoctorRegister, UserRegistration
+from .forms import AdminLoginForm, DoctorCategoryForm, DepartmentForm, DoctorRegisterForm, UserRegisterForm
+
+
+def admin_required(view_func):
+    """
+    Task 2: Restrict view access to authenticated admin users only.
+    - If user is not authenticated: redirects to login page.
+    - If user is authenticated but not an Admin (and not staff/superuser): returns 403 Forbidden
+      and displays an access restriction notice.
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(f"{reverse('login')}?next={request.path}")
+        if not (request.user.is_superuser or request.user.is_staff or getattr(request.user, 'role', '') == 'Admin'):
+            messages.error(request, "Access restricted: Administrator privileges are required to view this page.")
+            return render(request, 'hospital/access_denied.html', {
+                'title': 'Access Restricted',
+                'user': request.user
+            }, status=403)
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 
 def get_client_ip(request):
@@ -81,7 +105,7 @@ def admin_logout_view(request):
 # Day 2: Admin Dashboard (Visible only to logged-in admin users)
 # ==========================================
 
-@login_required(login_url='login')
+@admin_required
 def admin_dashboard_view(request):
     """
     Day 2 Task 2:
@@ -119,7 +143,7 @@ def admin_dashboard_view(request):
 # Day 3: Doctor Category Management (CRUD + Listing Table)
 # ==========================================
 
-@login_required(login_url='login')
+@admin_required
 def category_list_view(request):
     """
     Day 3 Task 1 & Task 3:
@@ -159,7 +183,7 @@ def category_list_view(request):
     return render(request, 'hospital/category_list.html', context)
 
 
-@login_required(login_url='login')
+@admin_required
 def category_add_view(request):
     """
     Day 3 Task 2: Add doctor category view
@@ -184,7 +208,7 @@ def category_add_view(request):
     })
 
 
-@login_required(login_url='login')
+@admin_required
 def category_edit_view(request, pk):
     """
     Day 3 Task 2: Edit doctor category view
@@ -211,7 +235,7 @@ def category_edit_view(request, pk):
     })
 
 
-@login_required(login_url='login')
+@admin_required
 def category_delete_view(request, pk):
     """
     Day 3 Task 2: Delete doctor category view
@@ -231,14 +255,14 @@ def category_delete_view(request, pk):
 # Bonus / Day 2 Department Management Views
 # ==========================================
 
-@login_required(login_url='login')
+@admin_required
 def department_list_view(request):
     """Department listing for managing hospital departments"""
     departments = Department.objects.annotate(doctor_count=Count('doctor_categories')).all()
     return render(request, 'hospital/department_list.html', {'departments': departments})
 
 
-@login_required(login_url='login')
+@admin_required
 def department_add_view(request):
     """Add new department view"""
     if request.method == 'POST':
@@ -254,7 +278,7 @@ def department_add_view(request):
     return render(request, 'hospital/department_form.html', {'form': form, 'title': 'Add Department', 'is_edit': False})
 
 
-@login_required(login_url='login')
+@admin_required
 def department_edit_view(request, pk):
     """Edit department view"""
     dept = get_object_or_404(Department, pk=pk)
@@ -271,7 +295,7 @@ def department_edit_view(request, pk):
     return render(request, 'hospital/department_form.html', {'form': form, 'department': dept, 'title': f"Edit Department: {dept.name}", 'is_edit': True})
 
 
-@login_required(login_url='login')
+@admin_required
 def department_delete_view(request, pk):
     """Delete department view"""
     dept = get_object_or_404(Department, pk=pk)
@@ -287,7 +311,7 @@ def department_delete_view(request, pk):
 # Task: Manual Doctor Registration & Listing Views
 # ==========================================
 
-@login_required(login_url='login')
+@admin_required
 def doctor_register_view(request):
     """
     Task 1 & 2: Form handling in Django views, input validation, upload & save doctor photo.
@@ -316,7 +340,7 @@ def doctor_register_view(request):
     })
 
 
-@login_required(login_url='login')
+@admin_required
 def doctor_confirmation_view(request, pk):
     """
     Task 3: Display confirmation of registered doctor
@@ -325,7 +349,7 @@ def doctor_confirmation_view(request, pk):
     return render(request, 'hospital/doctor_confirmation.html', {'doctor': doctor})
 
 
-@login_required(login_url='login')
+@admin_required
 def doctor_edit_view(request, pk):
     """
     Task 2: Implement edit doctor functionality with prefilled form
@@ -359,46 +383,68 @@ def doctor_edit_view(request, pk):
 
 
 
-@login_required(login_url='login')
+@admin_required
 def doctor_list_view(request):
     """
-    View list of all registered doctors with search and filter
+    Task 1: View list of all registered doctors with search, filter, and pagination.
     """
     search_query = request.GET.get('q', '').strip()
     selected_dept = request.GET.get('department', '').strip()
     selected_cat = request.GET.get('category', '').strip()
 
-    doctors = DoctorRegister.objects.select_related('department', 'category').all()
+    doctors_qs = DoctorRegister.objects.select_related('department', 'category').all().order_by('-id')
 
     if search_query:
-        doctors = doctors.filter(
+        doctors_qs = doctors_qs.filter(
             Q(full_name__icontains=search_query) |
             Q(email__icontains=search_query) |
             Q(phone__icontains=search_query) |
-            Q(qualification__icontains=search_query)
+            Q(qualification__icontains=search_query) |
+            Q(room_number__icontains=search_query)
         )
 
     if selected_dept:
-        doctors = doctors.filter(department_id=selected_dept)
+        doctors_qs = doctors_qs.filter(department_id=selected_dept)
 
     if selected_cat:
-        doctors = doctors.filter(category_id=selected_cat)
+        doctors_qs = doctors_qs.filter(category_id=selected_cat)
+
+    total_doctors = doctors_qs.count()
+
+    # Pagination: default 6 doctors per page
+    per_page = request.GET.get('per_page', 6)
+    try:
+        per_page = int(per_page)
+        if per_page < 1:
+            per_page = 6
+    except (ValueError, TypeError):
+        per_page = 6
+
+    paginator = Paginator(doctors_qs, per_page)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.get_page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        page_obj = paginator.get_page(1)
 
     departments = Department.objects.filter(is_active=True)
     categories = DoctorCategory.objects.filter(is_active=True)
 
     return render(request, 'hospital/doctor_list.html', {
-        'doctors': doctors,
+        'doctors': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
         'departments': departments,
         'categories': categories,
         'search_query': search_query,
         'selected_dept': selected_dept,
         'selected_cat': selected_cat,
-        'total_doctors': doctors.count(),
+        'total_doctors': total_doctors,
+        'is_paginated': page_obj.has_other_pages(),
     })
 
 
-@login_required(login_url='login')
+@admin_required
 def doctor_delete_view(request, pk):
     """Delete a registered doctor"""
     doctor = get_object_or_404(DoctorRegister, pk=pk)
@@ -408,4 +454,62 @@ def doctor_delete_view(request, pk):
         messages.success(request, f"Doctor Dr. {name} has been removed.")
         return redirect('doctor_list')
     return render(request, 'hospital/doctor_confirm_delete.html', {'doctor': doctor})
+
+
+# ==========================================
+# Task 3: User / Staff Registration View
+# ==========================================
+
+def user_register_view(request):
+    """
+    Task 3: Registration view with proper form handling, validation,
+    and creation of CustomUser & UserRegistration profile records.
+    """
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = UserRegisterForm(request.POST)
+        if form.is_valid():
+            full_name = form.cleaned_data['full_name']
+            email = form.cleaned_data['email']
+            contact_number = form.cleaned_data['contact_number']
+            department_name = form.cleaned_data['department_name']
+            role = form.cleaned_data['role']
+            password = form.cleaned_data['password']
+
+            name_parts = full_name.split(maxsplit=1)
+            first_name = name_parts[0]
+            last_name = name_parts[1] if len(name_parts) > 1 else ''
+
+            is_admin = (role == 'Admin')
+
+            user = CustomUser.objects.create_user(
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                phone=contact_number,
+                role=role,
+                is_staff=is_admin,
+                is_superuser=is_admin,
+                is_active=True
+            )
+
+            registration = form.save(commit=False)
+            registration.user = user
+            registration.save()
+
+            messages.success(request, f"Registration successful for {full_name}! You can now sign in with your credentials.")
+            return redirect('login')
+        else:
+            messages.error(request, "Registration failed. Please check the highlighted fields below.")
+    else:
+        form = UserRegisterForm()
+
+    return render(request, 'hospital/register.html', {
+        'form': form,
+        'title': 'User Registration - Clinic On',
+    })
+
 

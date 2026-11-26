@@ -360,7 +360,12 @@
             <div class="user-pill">
                 <div class="user-info">
                     <div class="user-name">{{ request.user.first_name|default:request.user.email }}</div>
-                    <div class="user-role">{{ request.user.role|default:"Administrator" }}</div>
+                    <div class="user-role d-flex align-items-center gap-1">
+                        <span>{{ request.user.role|default:"Administrator" }}</span>
+                        {% if request.user.role == 'Admin' or request.user.is_superuser or request.user.is_staff %}
+                            <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.65rem; padding: 1px 4px;">Admin</span>
+                        {% endif %}
+                    </div>
                 </div>
                 <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm p-1 px-2" title="Logout">
                     <i class="fa-solid fa-right-from-bracket"></i>
@@ -383,9 +388,15 @@
             </div>
 
             <div class="d-flex align-items-center gap-3">
-                <span class="badge bg-light text-secondary border small">
-                    <i class="fa-solid fa-circle text-success me-1" style="font-size: 0.5rem;"></i> System Online
-                </span>
+                {% if request.user.role == 'Admin' or request.user.is_superuser or request.user.is_staff %}
+                    <span class="badge bg-success-subtle text-success border small">
+                        <i class="fa-solid fa-shield-halved me-1"></i> Admin Authenticated
+                    </span>
+                {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary border small">
+                        Staff Access
+                    </span>
+                {% endif %}
                 <span class="text-muted small d-none d-sm-inline">
                     {{ request.user.email }}
                 </span>

@@ -9,6 +9,7 @@ urlpatterns = [
     # Day 1 & Day 2 Auth URLs
     path('login/', views.admin_login_view, name='login'),
     path('logout/', views.admin_logout_view, name='logout'),
+    path('register/', views.user_register_view, name='register'),
 
     # Day 3 Doctor Category CRUD URLs
     path('categories/', views.category_list_view, name='category_list'),

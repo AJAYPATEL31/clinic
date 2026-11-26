@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User & Staff Registration - Clinic On</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 15px;
+            color: #0f172a;
+        }
+
+        .reg-card {
+            width: 100%;
+            max-width: 520px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+            padding: 36px 32px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background-color: #eff6ff;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin: 0 auto 14px auto;
+        }
+
+        .title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 0.88rem;
+            background-color: #ffffff;
+            color: #0f172a;
+            transition: all 0.15s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .btn-toggle-pw {
+            border: 1px solid #cbd5e1;
+            border-left: none;
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+            background-color: #ffffff;
+            color: #64748b;
+            padding: 0 14px;
+        }
+
+        .btn-toggle-pw:hover, .btn-toggle-pw:focus {
+            background-color: #f8fafc;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+
+        .btn-submit {
+            background-color: #0f172a;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 11px;
+            font-weight: 600;
+            font-size: 0.92rem;
+            transition: all 0.15s ease;
+        }
+
+        .btn-submit:hover {
+            background-color: #1e293b;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 0.82rem;
+            color: #64748b;
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="reg-card">
+        <!-- Center-Aligned Header -->
+        <div class="text-center">
+            <div class="brand-icon">
+                <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div class="title">Clinic On</div>
+            <p class="subtitle">Hospital Management &bull; Account Registration</p>
+        </div>
+
+        <!-- Flash messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show py-2 px-3 small mb-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Client-side Validation Alert -->
+        <div id="regClientAlert" class="alert alert-danger alert-dismissible fade show d-none py-2 px-3 small mb-3" role="alert">
+            <i class="fa-solid fa-circle-exclamation me-1"></i>
+            <span id="regClientAlertMsg">Please fill in all required registration fields properly.</span>
+        </div>
+
+        <!-- Registration Form (Task 3: Proper registration fields) -->
+        <form method="POST" id="userRegisterForm" action="{% url 'register' %}" novalidate>
+            {% csrf_token %}
+
+            <!-- Full Name -->
+            <div class="mb-3">
+                <label for="regFullName" class="form-label">
+                    Full Name <span class="text-danger">*</span>
+                </label>
+                {{ form.full_name }}
+                <div class="invalid-feedback" id="nameError">Full name must be at least 3 characters.</div>
+                {% if form.full_name.errors %}
+                    <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ form.full_name.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Email & Phone in 2 columns -->
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label for="regEmail" class="form-label">
+                        Email Address <span class="text-danger">*</span>
+                    </label>
+                    {{ form.email }}
+                    <div class="invalid-feedback" id="emailError">Valid email address is required.</div>
+                    {% if form.email.errors %}
+                        <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ form.email.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label for="regContact" class="form-label">
+                        Contact Number <span class="text-danger">*</span>
+                    </label>
+                    {{ form.contact_number }}
+                    <div class="invalid-feedback" id="phoneError">Valid phone number (min 8 digits).</div>
+                    {% if form.contact_number.errors %}
+                        <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ form.contact_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Role & Department in 2 columns -->
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label for="regRole" class="form-label">
+                        Account Role <span class="text-danger">*</span>
+                    </label>
+                    {{ form.role }}
+                    {% if form.role.errors %}
+                        <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ form.role.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label for="regDepartment" class="form-label">
+                        Department / Unit <span class="text-danger">*</span>
+                    </label>
+                    {{ form.department_name }}
+                    <div class="invalid-feedback" id="deptError">Department name is required.</div>
+                    {% if form.department_name.errors %}
+                        <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ form.department_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+                <label for="regPassword" class="form-label">
+                    Password <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                    {{ form.password }}
+                    <button class="btn btn-toggle-pw" type="button" id="toggleRegPwBtn" title="Show or hide password">
+                        <i class="fa-regular fa-eye" id="toggleRegPwIcon"></i>
+                    </button>
+                </div>
+                <div class="invalid-feedback" id="pwError">Password must be at least 6 characters.</div>
+                {% if form.password.errors %}
+                    <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ form.password.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="mb-4">
+                <label for="regConfirmPassword" class="form-label">
+                    Confirm Password <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                    {{ form.confirm_password }}
+                    <button class="btn btn-toggle-pw" type="button" id="toggleConfirmPwBtn" title="Show or hide password">
+                        <i class="fa-regular fa-eye" id="toggleConfirmPwIcon"></i>
+                    </button>
+                </div>
+                <div class="invalid-feedback" id="confirmPwError">Passwords must match.</div>
+                {% if form.confirm_password.errors %}
+                    <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ form.confirm_password.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid">
+                <button type="submit" class="btn btn-submit" id="regSubmitBtn">
+                    <i class="fa-solid fa-check me-1"></i> Register Profile
+                </button>
+            </div>
+        </form>
+
+        <div class="footer-note">
+            Already registered? <a href="{% url 'login' %}" class="text-decoration-none fw-semibold text-primary">Sign in here</a>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Password Show/Hide & Client Validation Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Toggle Password 1
+        const togglePwBtn = document.getElementById('toggleRegPwBtn');
+        const pwInput = document.getElementById('regPassword');
+        const pwIcon = document.getElementById('toggleRegPwIcon');
+
+        if (togglePwBtn && pwInput && pwIcon) {
+            togglePwBtn.addEventListener('click', function () {
+                if (pwInput.type === 'password') {
+                    pwInput.type = 'text';
+                    pwIcon.classList.remove('fa-eye');
+                    pwIcon.classList.add('fa-eye-slash');
+                } else {
+                    pwInput.type = 'password';
+                    pwIcon.classList.remove('fa-eye-slash');
+                    pwIcon.classList.add('fa-eye');
+                }
+            });
+        }
+
+        // Toggle Confirm Password
+        const toggleConfirmBtn = document.getElementById('toggleConfirmPwBtn');
+        const confirmPwInput = document.getElementById('regConfirmPassword');
+        const confirmPwIcon = document.getElementById('toggleConfirmPwIcon');
+
+        if (toggleConfirmBtn && confirmPwInput && confirmPwIcon) {
+            toggleConfirmBtn.addEventListener('click', function () {
+                if (confirmPwInput.type === 'password') {
+                    confirmPwInput.type = 'text';
+                    confirmPwIcon.classList.remove('fa-eye');
+                    confirmPwIcon.classList.add('fa-eye-slash');
+                } else {
+                    confirmPwInput.type = 'password';
+                    confirmPwIcon.classList.remove('fa-eye-slash');
+                    confirmPwIcon.classList.add('fa-eye');
+                }
+            });
+        }
+
+        // Client-side validation
+        const form = document.getElementById('userRegisterForm');
+        const nameInput = document.getElementById('regFullName');
+        const emailInput = document.getElementById('regEmail');
+        const phoneInput = document.getElementById('regContact');
+        const alertBox = document.getElementById('regClientAlert');
+
+        function setFieldState(input, isValid) {
+            if (!input) return isValid;
+            if (isValid) {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+            } else {
+                input.classList.remove('is-valid');
+                input.classList.add('is-invalid');
+            }
+            return isValid;
+        }
+
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                let valid = true;
+
+                if (nameInput) {
+                    const ok = nameInput.value.trim().length >= 3;
+                    if (!setFieldState(nameInput, ok)) valid = false;
+                }
+
+                if (emailInput) {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    const ok = emailRegex.test(emailInput.value.trim());
+                    if (!setFieldState(emailInput, ok)) valid = false;
+                }
+
+                if (phoneInput) {
+                    const digits = phoneInput.value.replace(/\D/g, '');
+                    const ok = digits.length >= 8;
+                    if (!setFieldState(phoneInput, ok)) valid = false;
+                }
+
+                if (pwInput) {
+                    const ok = pwInput.value.length >= 6;
+                    if (!setFieldState(pwInput, ok)) valid = false;
+                }
+
+                if (confirmPwInput && pwInput) {
+                    const ok = confirmPwInput.value.length >= 6 && confirmPwInput.value === pwInput.value;
+                    if (!setFieldState(confirmPwInput, ok)) valid = false;
+                }
+
+                if (!valid) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (alertBox) alertBox.classList.remove('d-none');
+                    const firstInvalid = form.querySelector('.is-invalid');
+                    if (firstInvalid) firstInvalid.focus();
+                } else {
+                    if (alertBox) alertBox.classList.add('d-none');
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html>

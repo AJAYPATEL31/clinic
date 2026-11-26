@@ -1,5 +1,5 @@
 from django import forms
-from .models import DoctorCategory, Department, DoctorRegister
+from .models import DoctorCategory, Department, DoctorRegister, CustomUser, UserRegistration
 
 
 class AdminLoginForm(forms.Form):
@@ -211,5 +211,115 @@ class DoctorRegisterForm(forms.ModelForm):
             if hasattr(photo, 'content_type') and photo.content_type not in valid_types:
                 raise forms.ValidationError("Please upload a valid image file (JPEG, PNG, or WebP).")
         return photo
+
+
+class UserRegisterForm(forms.ModelForm):
+    """
+    Task 3: User / Admin Registration Form with proper fields and validation
+    """
+    full_name = forms.CharField(
+        max_length=150,
+        label="Full Name",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. Dr. Rajesh Sharma, Priya Patel',
+            'id': 'regFullName',
+            'required': True
+        })
+    )
+    email = forms.EmailField(
+        label="Email Address",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'admin@clinicon.com',
+            'id': 'regEmail',
+            'required': True
+        })
+    )
+    contact_number = forms.CharField(
+        max_length=20,
+        label="Contact Number",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '+91 98765 43210',
+            'id': 'regContact',
+            'required': True
+        })
+    )
+    role = forms.ChoiceField(
+        choices=CustomUser.ROLE_CHOICES,
+        label="Account Role",
+        initial='Admin',
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'regRole',
+            'required': True
+        })
+    )
+    department_name = forms.CharField(
+        max_length=100,
+        label="Department / Unit",
+        initial='Administration',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. Administration, Cardiology, Emergency',
+            'id': 'regDepartment',
+            'required': True
+        })
+    )
+    password = forms.CharField(
+        label="Password",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '••••••••',
+            'id': 'regPassword',
+            'required': True
+        })
+    )
+    confirm_password = forms.CharField(
+        label="Confirm Password",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '••••••••',
+            'id': 'regConfirmPassword',
+            'required': True
+        })
+    )
+
+    class Meta:
+        model = UserRegistration
+        fields = ['full_name', 'email', 'contact_number', 'department_name']
+
+    def clean_full_name(self):
+        name = self.cleaned_data.get('full_name', '').strip()
+        if len(name) < 3:
+            raise forms.ValidationError("Full name must be at least 3 characters long.")
+        return name
+
+    def clean_contact_number(self):
+        contact = self.cleaned_data.get('contact_number', '').strip()
+        digits = ''.join(filter(str.isdigit, contact))
+        if len(digits) < 8:
+            raise forms.ValidationError("Please provide a valid contact number (at least 8 digits).")
+        return contact
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if CustomUser.objects.filter(email=email).exists():
+            raise forms.ValidationError("An account with this email address already exists.")
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        confirm_password = cleaned_data.get('confirm_password')
+
+        if password and len(password) < 6:
+            self.add_error('password', "Password must be at least 6 characters long.")
+
+        if password and confirm_password and password != confirm_password:
+            self.add_error('confirm_password', "Passwords do not match.")
+
+        return cleaned_data
 
 
