@@ -1,5 +1,8 @@
+import re
 from django import forms
-from .models import DoctorCategory, Department, DoctorRegister, CustomUser, UserRegistration
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from .models import DoctorCategory, Department, DoctorRegister, CustomUser, UserRegistration, UserRegister
 
 
 class AdminLoginForm(forms.Form):
@@ -287,8 +290,8 @@ class UserRegisterForm(forms.ModelForm):
     )
 
     class Meta:
-        model = UserRegistration
-        fields = ['full_name', 'email', 'contact_number', 'department_name']
+        model = UserRegister
+        fields = ['full_name', 'email', 'contact_number', 'role', 'department_name']
 
     def clean_full_name(self):
         name = self.cleaned_data.get('full_name', '').strip()
@@ -305,17 +308,58 @@ class UserRegisterForm(forms.ModelForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email', '').strip().lower()
-        if CustomUser.objects.filter(email=email).exists():
+        if not email:
+            raise forms.ValidationError("Email address is required.")
+
+        user_register_qs = UserRegister.objects.filter(email__iexact=email)
+        if self.instance and self.instance.pk:
+            user_register_qs = user_register_qs.exclude(pk=self.instance.pk)
+
+        if (
+            CustomUser.objects.filter(email__iexact=email).exists()
+            or user_register_qs.exists()
+            or UserRegistration.objects.filter(email__iexact=email).exists()
+        ):
             raise forms.ValidationError("An account with this email address already exists.")
         return email
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password', '')
+        errors = []
+
+        if len(password) < 8:
+            errors.append("Password must be at least 8 characters long.")
+        if not re.search(r'[A-Z]', password):
+            errors.append("Password must contain at least one uppercase letter (A-Z).")
+        if not re.search(r'[a-z]', password):
+            errors.append("Password must contain at least one lowercase letter (a-z).")
+        if not re.search(r'\d', password):
+            errors.append("Password must contain at least one number (0-9).")
+        if not re.search(r'[^A-Za-z0-9]', password):
+            errors.append("Password must contain at least one special character (e.g. @, #, $, !).")
+
+        # Run Django's configured AUTH_PASSWORD_VALIDATORS (common/numeric/similarity)
+        email = self.cleaned_data.get('email', '')
+        full_name = self.cleaned_data.get('full_name', '')
+        temp_user = CustomUser(email=email, first_name=full_name)
+        try:
+            validate_password(password, user=temp_user)
+        except DjangoValidationError as exc:
+            for msg in exc.messages:
+                if 'at least 8 characters' in msg and any('at least 8 characters' in e for e in errors):
+                    continue
+                if msg not in errors:
+                    errors.append(msg)
+
+        if errors:
+            raise forms.ValidationError(errors)
+
+        return password
 
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get('password')
         confirm_password = cleaned_data.get('confirm_password')
-
-        if password and len(password) < 6:
-            self.add_error('password', "Password must be at least 6 characters long.")
 
         if password and confirm_password and password != confirm_password:
             self.add_error('confirm_password', "Passwords do not match.")

@@ -4,10 +4,11 @@ from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Count
 from django.utils import timezone
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from .models import DoctorCategory, Department, LoginLog, CustomUser, DoctorRegister, UserRegistration
+from .models import DoctorCategory, Department, LoginLog, CustomUser, DoctorRegister, UserRegistration, UserRegister
 from .forms import AdminLoginForm, DoctorCategoryForm, DepartmentForm, DoctorRegisterForm, UserRegisterForm
 
 
@@ -462,8 +463,9 @@ def doctor_delete_view(request, pk):
 
 def user_register_view(request):
     """
-    Task 3: Registration view with proper form handling, validation,
-    and creation of CustomUser & UserRegistration profile records.
+    Backend form handler for user registration:
+    - Validates form inputs, email uniqueness, and strong password rules.
+    - Creates CustomUser account and saves registration data to UserRegister model.
     """
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -474,7 +476,6 @@ def user_register_view(request):
             full_name = form.cleaned_data['full_name']
             email = form.cleaned_data['email']
             contact_number = form.cleaned_data['contact_number']
-            department_name = form.cleaned_data['department_name']
             role = form.cleaned_data['role']
             password = form.cleaned_data['password']
 
@@ -484,24 +485,30 @@ def user_register_view(request):
 
             is_admin = (role == 'Admin')
 
-            user = CustomUser.objects.create_user(
-                email=email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name,
-                phone=contact_number,
-                role=role,
-                is_staff=is_admin,
-                is_superuser=is_admin,
-                is_active=True
-            )
+            try:
+                with transaction.atomic():
+                    user = CustomUser.objects.create_user(
+                        email=email,
+                        password=password,
+                        first_name=first_name,
+                        last_name=last_name,
+                        phone=contact_number,
+                        role=role,
+                        is_staff=is_admin,
+                        is_superuser=is_admin,
+                        is_active=True
+                    )
 
-            registration = form.save(commit=False)
-            registration.user = user
-            registration.save()
-
-            messages.success(request, f"Registration successful for {full_name}! You can now sign in with your credentials.")
-            return redirect('login')
+                    registration = form.save(commit=False)
+                    registration.user = user
+                    registration.email = email
+                    registration.save()
+            except IntegrityError:
+                form.add_error('email', "An account with this email address already exists.")
+                messages.error(request, "Registration failed. This email address is already registered.")
+            else:
+                messages.success(request, f"Registration successful for {full_name}! You can now sign in with your credentials.")
+                return redirect('login')
         else:
             messages.error(request, "Registration failed. Please check the highlighted fields below.")
     else:

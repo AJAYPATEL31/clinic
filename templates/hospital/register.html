@@ -227,9 +227,16 @@
                         <i class="fa-regular fa-eye" id="toggleRegPwIcon"></i>
                     </button>
                 </div>
-                <div class="invalid-feedback" id="pwError">Password must be at least 6 characters.</div>
+                <div class="form-text text-muted" style="font-size: 0.75rem;">
+                    Use at least 8 characters with uppercase, lowercase, number, and special character.
+                </div>
+                <div class="invalid-feedback" id="pwError">
+                    Password must be 8+ characters and include uppercase, lowercase, a number, and a special character.
+                </div>
                 {% if form.password.errors %}
-                    <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ form.password.errors.0 }}</div>
+                    {% for error in form.password.errors %}
+                        <div class="text-danger small mt-1" style="font-size: 0.78rem;">{{ error }}</div>
+                    {% endfor %}
                 {% endif %}
             </div>
 
@@ -348,12 +355,19 @@
                 }
 
                 if (pwInput) {
-                    const ok = pwInput.value.length >= 6;
+                    const pw = pwInput.value;
+                    const ok = (
+                        pw.length >= 8 &&
+                        /[A-Z]/.test(pw) &&
+                        /[a-z]/.test(pw) &&
+                        /\d/.test(pw) &&
+                        /[^A-Za-z0-9]/.test(pw)
+                    );
                     if (!setFieldState(pwInput, ok)) valid = false;
                 }
 
                 if (confirmPwInput && pwInput) {
-                    const ok = confirmPwInput.value.length >= 6 && confirmPwInput.value === pwInput.value;
+                    const ok = confirmPwInput.value.length >= 8 && confirmPwInput.value === pwInput.value;
                     if (!setFieldState(confirmPwInput, ok)) valid = false;
                 }
 

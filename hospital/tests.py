@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
-from hospital.models import CustomUser, UserRegistration, LoginLog, Department, DoctorCategory, DoctorRegister
+from hospital.models import CustomUser, UserRegistration, UserRegister, LoginLog, Department, DoctorCategory, DoctorRegister
 
 
 class ClinicOnProjectTests(TestCase):
@@ -479,15 +479,15 @@ class ClinicOnProjectTests(TestCase):
         self.assertIn('name="password"', content)
         self.assertIn('name="confirm_password"', content)
 
-        # POST valid registration
+        # POST valid registration with strong password
         post_resp = self.client.post(reverse('register'), {
             'full_name': 'Dr. Alok Verma',
             'email': 'dr.alok@clinicon.com',
             'contact_number': '+91 98888 12345',
             'department_name': 'Neurology',
             'role': 'Admin',
-            'password': 'securepassword123',
-            'confirm_password': 'securepassword123',
+            'password': 'StrongPassword@123',
+            'confirm_password': 'StrongPassword@123',
         }, follow=True)
 
         self.assertEqual(post_resp.status_code, 200)
@@ -495,12 +495,19 @@ class ClinicOnProjectTests(TestCase):
         self.assertTemplateUsed(post_resp, 'hospital/login.html')
         self.assertIn('Registration successful', post_resp.content.decode('utf-8'))
 
-        # Verify user and registration record in database
+        # Verify CustomUser and UserRegister record in database
         new_user = CustomUser.objects.filter(email='dr.alok@clinicon.com').first()
         self.assertIsNotNone(new_user)
         self.assertEqual(new_user.role, 'Admin')
         self.assertTrue(new_user.is_staff)
-        self.assertTrue(UserRegistration.objects.filter(email='dr.alok@clinicon.com').exists())
+
+        user_reg = UserRegister.objects.filter(email='dr.alok@clinicon.com').first()
+        self.assertIsNotNone(user_reg)
+        self.assertEqual(user_reg.user, new_user)
+        self.assertEqual(user_reg.full_name, 'Dr. Alok Verma')
+        self.assertEqual(user_reg.role, 'Admin')
+        self.assertEqual(user_reg.department_name, 'Neurology')
+        self.assertEqual(user_reg.contact_number, '+91 98888 12345')
 
         # POST with password mismatch
         mismatch_resp = self.client.post(reverse('register'), {
@@ -509,12 +516,90 @@ class ClinicOnProjectTests(TestCase):
             'contact_number': '+91 98888 99999',
             'department_name': 'Administration',
             'role': 'Staff',
-            'password': 'password123',
-            'confirm_password': 'differentpassword',
+            'password': 'StrongPassword@123',
+            'confirm_password': 'DifferentPassword@123',
         })
         self.assertEqual(mismatch_resp.status_code, 200)
         self.assertIn('Passwords do not match', mismatch_resp.content.decode('utf-8'))
         self.assertFalse(CustomUser.objects.filter(email='mismatch@clinicon.com').exists())
+        self.assertFalse(UserRegister.objects.filter(email='mismatch@clinicon.com').exists())
+
+    def test_user_register_email_uniqueness(self):
+        """Task 2: Validate email uniqueness across existing users and UserRegister records"""
+        # Duplicate of existing CustomUser email (different case)
+        dup_resp = self.client.post(reverse('register'), {
+            'full_name': 'Duplicate Admin',
+            'email': self.admin_email.upper(),
+            'contact_number': '+91 98888 11111',
+            'department_name': 'Administration',
+            'role': 'Staff',
+            'password': 'StrongPassword@123',
+            'confirm_password': 'StrongPassword@123',
+        })
+        self.assertEqual(dup_resp.status_code, 200)
+        self.assertFormError(dup_resp.context['form'], 'email', 'An account with this email address already exists.')
+        self.assertFalse(UserRegister.objects.filter(email__iexact=self.admin_email).exists())
+
+        # Duplicate of existing UserRegister email
+        UserRegister.objects.create(
+            full_name='Existing Staff',
+            email='existing.staff@clinicon.com',
+            contact_number='+91 97777 11111',
+            role='Staff',
+            department_name='Cardiology'
+        )
+        dup_reg_resp = self.client.post(reverse('register'), {
+            'full_name': 'Another Staff',
+            'email': 'Existing.Staff@clinicon.com',
+            'contact_number': '+91 97777 22222',
+            'department_name': 'Cardiology',
+            'role': 'Staff',
+            'password': 'StrongPassword@123',
+            'confirm_password': 'StrongPassword@123',
+        })
+        self.assertEqual(dup_reg_resp.status_code, 200)
+        self.assertFormError(dup_reg_resp.context['form'], 'email', 'An account with this email address already exists.')
+        self.assertEqual(UserRegister.objects.filter(email__iexact='existing.staff@clinicon.com').count(), 1)
+
+    def test_user_register_strong_password_validation(self):
+        """Task 2: Validate strong password rules on registration"""
+        weak_passwords = [
+            ('Short1!', 'Password must be at least 8 characters long.'),
+            ('alllowercase1!', 'Password must contain at least one uppercase letter (A-Z).'),
+            ('ALLUPPERCASE1!', 'Password must contain at least one lowercase letter (a-z).'),
+            ('NoDigitsHere!', 'Password must contain at least one number (0-9).'),
+            ('NoSpecial123', 'Password must contain at least one special character (e.g. @, #, $, !).'),
+        ]
+
+        for idx, (weak_pw, expected_msg) in enumerate(weak_passwords):
+            email = f'weak{idx}@clinicon.com'
+            resp = self.client.post(reverse('register'), {
+                'full_name': 'Weak Password User',
+                'email': email,
+                'contact_number': '+91 96666 55555',
+                'department_name': 'Administration',
+                'role': 'Staff',
+                'password': weak_pw,
+                'confirm_password': weak_pw,
+            })
+            self.assertEqual(resp.status_code, 200)
+            self.assertFormError(resp.context['form'], 'password', expected_msg)
+            self.assertFalse(UserRegister.objects.filter(email=email).exists())
+            self.assertFalse(CustomUser.objects.filter(email=email).exists())
+
+    def test_user_register_model_persistence(self):
+        """Task 3: Create UserRegister model and verify persisted fields"""
+        reg = UserRegister.objects.create(
+            user=self.admin_user,
+            full_name='Priya Patel',
+            email='priya.patel@clinicon.com',
+            contact_number='+91 98111 22233',
+            role='Doctor',
+            department_name='Pediatrics',
+        )
+        self.assertEqual(UserRegister.objects.count(), 1)
+        self.assertEqual(str(reg), 'Priya Patel (priya.patel@clinicon.com) - Doctor')
+        self.assertTrue(reg.is_active)
 
 
 
